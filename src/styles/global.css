@@ -1,0 +1,154 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+/* Glass card */
+.glass-card {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.glass-card:hover {
+  background: var(--glass-hover);
+  border-color: rgba(255,255,255,0.12);
+}
+.glass-card.highlighted {
+  border-color: var(--glass-border-hl);
+  box-shadow: var(--hl-teal-glow);
+}
+
+/* Table row */
+.table-row-selected {
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--hl-teal);
+}
+
+/* Rate badge */
+.rate-badge {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  display: inline-block;
+  white-space: nowrap;
+}
+.rate-badge.cold   { background: rgba(91,141,238,0.12); color: var(--rate-cold); border-color: rgba(91,141,238,0.25); }
+.rate-badge.warm   { background: rgba(245,197,66,0.12);  color: var(--rate-warm);  border-color: rgba(245,197,66,0.25); }
+.rate-badge.hot    { background: rgba(255,140,66,0.12);  color: var(--rate-hot);   border-color: rgba(255,140,66,0.25); }
+.rate-badge.fire   { background: rgba(255,79,110,0.15);  color: var(--rate-fire);  border-color: rgba(255,79,110,0.3); }
+
+/* Mono number utility */
+.mono { font-family: var(--font-mono); }
+
+/* Button base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-md);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--hl-teal);
+  color: #0a0b0f;
+}
+.btn-primary:hover { background: #5ff0e0; box-shadow: var(--hl-teal-glow); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--glass-border);
+}
+.btn-ghost:hover { background: var(--glass-hover); color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
+.btn-danger {
+  background: rgba(255,79,110,0.12);
+  color: var(--accent-red);
+  border-color: rgba(255,79,110,0.25);
+}
+.btn-danger:hover { background: rgba(255,79,110,0.2); }
+
+/* Stat card */
+.stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+/* Input */
+.input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: var(--sp-2) var(--sp-3);
+  outline: none;
+  transition: border-color var(--t-fast);
+  width: 100%;
+}
+.input:focus { border-color: var(--hl-teal); }
+.input::placeholder { color: var(--text-muted); }
+
+/* Select */
+select.input { cursor: pointer; }
+select.input option { background: var(--bg-overlay); }
+
+/* Positive / Negative */
+.pos { color: var(--accent-green); }
+.neg { color: var(--accent-red); }
+
+/* Pulse animation for regime */
+@keyframes pulse-hot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.pulse-hot { animation: pulse-hot 2s ease-in-out infinite; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fade-in 0.3s ease forwards; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 1s linear infinite; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
