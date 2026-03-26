@@ -198,3 +198,107 @@ export async function fetchCandles(symbol: string, hours?: number, startTime?: n
 }
 
 export { generateMockPairs, generateMockFundingHistory, generateMockCandles };
+
+// ─── Real account API ────────────────────────────────────────────────────────
+
+export interface HLAccountState {
+  marginSummary: {
+    accountValue: string;
+    totalNtlPos: string;
+    totalRawUsd: string;
+    totalMarginUsed: string;
+  };
+  crossMarginSummary: {
+    accountValue: string;
+    totalNtlPos: string;
+  };
+  assetPositions: Array<{
+    position: {
+      coin: string;
+      szi: string;
+      entryPx: string;
+      positionValue: string;
+      unrealizedPnl: string;
+      returnOnEquity: string;
+      liquidationPx: string | null;
+      leverage: { type: string; value: number };
+      cumFunding: { allTime: string; sinceOpen: string; sinceChange: string };
+    };
+    type: string;
+  }>;
+}
+
+export async function fetchAccountState(address: string): Promise<{ balance: number; positions: HLAccountState['assetPositions'] } | null> {
+  try {
+    const res = await fetch(`${HL_REST_URL}/info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'clearinghouseState', user: address }),
+    });
+    if (!res.ok) throw new Error('API error');
+    const data: HLAccountState = await res.json();
+    const balance = parseFloat(data.marginSummary?.accountValue ?? data.crossMarginSummary?.accountValue ?? '0');
+    return { balance, positions: data.assetPositions ?? [] };
+  } catch {
+    return null;
+  }
+}
+
+// Build and submit a market order to Hyperliquid via ethers v6 signing
+export async function placeMarketOrder(params: {
+  coin: string;
+  isBuy: boolean;
+  sz: number;        // size in coin units
+  px: number;        // worst acceptable price (slippage guard)
+  address: string;
+  provider: unknown; // ethers BrowserProvider
+}): Promise<{ success: boolean; orderId?: string; error?: string }> {
+  try {
+    // Dynamic import of ethers to avoid SSR issues
+    const { ethers } = await import('ethers');
+    const provider = new (ethers.BrowserProvider)(params.provider as ConstructorParameters<typeof ethers.BrowserProvider>[0]);
+    const signer = await provider.getSigner();
+
+    const timestamp = Date.now();
+    const nonce = timestamp;
+
+    const action = {
+      type: 'order',
+      orders: [{
+        a: 0, // asset index — HL maps coin to index server-side
+        b: params.isBuy,
+        p: params.px.toString(),
+        s: params.sz.toString(),
+        r: false, // not reduce-only
+        t: { limit: { tif: 'Ioc' } }, // Immediate or Cancel = market-like
+      }],
+      grouping: 'na',
+    };
+
+    // HL signing: keccak256 of action JSON + nonce + vault address
+    const msgHash = ethers.keccak256(
+      ethers.toUtf8Bytes(JSON.stringify({ action, nonce, vaultAddress: null }))
+    );
+    const sig = await signer.signMessage(ethers.getBytes(msgHash));
+    const { r, s, v } = ethers.Signature.from(sig);
+
+    const res = await fetch(`${HL_REST_URL}/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action,
+        nonce,
+        signature: { r, s, v },
+        vaultAddress: null,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.status === 'ok') {
+      return { success: true, orderId: data.response?.data?.statuses?.[0]?.resting?.oid?.toString() };
+    }
+    return { success: false, error: data.response?.data?.statuses?.[0]?.error ?? 'Unknown error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
