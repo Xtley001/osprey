@@ -8,6 +8,7 @@ import { formatUSD, formatPrice, formatPct } from '../utils/format';
 import { RATE_POLL_INTERVAL } from '../utils/constants';
 import { EntryModal } from '../components/shared/EntryModal';
 import type { Category, SortKey, FundingRate } from '../types/funding';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const CATEGORIES: Category[] = ['All', 'Crypto', 'TradFi', 'HIP-3', 'Trending', 'Pre-launch'];
 
@@ -21,6 +22,7 @@ const TrendIcon: React.FC<{ trend: FundingRate['trend'] }> = ({ trend }) => {
 
 const Scanner: React.FC = () => {
   const navigate    = useNavigate();
+  const { isMobile } = useBreakpoint();
   const filter      = useScannerStore(s => s.filter);
   const sortBy      = useScannerStore(s => s.sortBy);
   const isLoading   = useScannerStore(s => s.isLoading);
@@ -118,8 +120,8 @@ const Scanner: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="table-wrap" style={{ background: 'var(--bg-surface)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 740 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <ColHeader label="Pair" />

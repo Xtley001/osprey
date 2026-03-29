@@ -48,7 +48,7 @@ const Analytics: React.FC = () => {
       <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 'var(--sp-5)' }}>Analytics</h1>
 
       {/* Summary row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-3)', marginBottom: 'var(--sp-5)' }}>
+      <div className="grid-stats" style={{ marginBottom: 'var(--sp-5)' }}>
         {[
           { label: 'Total Funding Earned', value: formatUSD(totalEarned + openEarning), color: 'var(--accent-green)', sub: openEarning > 0 ? `+${formatUSD(openEarning)} open` : undefined },
           { label: 'Total Fees Paid',      value: '−' + formatUSD(totalFees),      color: 'var(--accent-red)' },
@@ -64,7 +64,7 @@ const Analytics: React.FC = () => {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)', marginBottom: 'var(--sp-4)' }}>
+      <div className="grid-2" style={{ marginBottom: 'var(--sp-4)' }}>
 
         {/* Top 10 rates */}
         <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>

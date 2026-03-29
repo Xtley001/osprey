@@ -1,4 +1,5 @@
 import { DEFAULT_STRATEGY } from '../utils/constants';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Activity, Zap, BarChart2 } from 'lucide-react';
@@ -80,6 +81,7 @@ const PairDetail: React.FC = () => {
   const pair = useScannerStore(s => s.pairs.find(p => p.symbol === symbol));
   const mode = useAppStore(s => s.mode);
   const [showEntry, setShowEntry] = useState(false);
+  const { isMobile } = useBreakpoint();
 
   const [history, setHistory] = useState<FundingEvent[]>([]);
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -140,7 +142,7 @@ const PairDetail: React.FC = () => {
       </div>
 
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)', marginBottom: 'var(--sp-4)' }}>
+      <div className="grid-2" style={{ marginBottom: 'var(--sp-4)' }}>
         <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 'var(--sp-3)', fontWeight: 600 }}>
             <Activity size={12} style={{ display: 'inline', marginRight: 4 }} />
@@ -170,7 +172,7 @@ const PairDetail: React.FC = () => {
       </div>
 
       {/* Stats grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)' }}>
+      <div className="grid-3" style={{ marginBottom: 'var(--sp-4)' }}>
         {[
           { label: 'Avg Rate 24h', value: formatRateRaw(avg24h) + '/hr', mono: true },
           { label: 'Avg Rate 7d',  value: formatRateRaw(avg7d) + '/hr',  mono: true },
@@ -189,7 +191,7 @@ const PairDetail: React.FC = () => {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--sp-3)', flexWrap: 'wrap' }}>
         {showEntry && pair && <EntryModal pair={pair} onClose={() => setShowEntry(false)} />}
         <button className="btn btn-primary" style={{ padding: '10px 24px', fontSize: 14 }} onClick={() => setShowEntry(true)}>
           <Zap size={15} /> Enter Position

@@ -6,6 +6,7 @@ import { useScannerStore } from '../store/scannerStore';
 import { formatUSD, formatPct, formatDuration } from '../utils/format';
 import type { BacktestParams, StrategyParams, BacktestResult } from '../types/backtest';
 import { subDays } from 'date-fns';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 // Sensible defaults matching real HL rate distribution
 const BT_DEFAULTS: StrategyParams = {
@@ -36,7 +37,7 @@ const MetricsGrid: React.FC<{ result: BacktestResult }> = ({ result: r }) => {
     { label: 'Annualized',      value: formatPct(m.annualizedYield),        color: 'var(--accent-green)' },
   ];
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--sp-3)' }}>
+    <div className="grid-4" style={{ gap: 'var(--sp-3)' }}>
       {items.map(item => (
         <div key={item.label} className="stat-card">
           <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>{item.label}</p>
@@ -120,6 +121,7 @@ const TradeLog: React.FC<{ result: BacktestResult }> = ({ result }) => (
 
 const Backtester: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const { isMobile, isTablet } = useBreakpoint();
   const preSymbol = searchParams.get('symbol') ?? 'BTC';
 
   const pairs = useScannerStore(s => s.pairs);
@@ -161,7 +163,7 @@ const Backtester: React.FC = () => {
     <div className="fade-in" style={{ paddingTop: 'var(--sp-4)', maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 'var(--sp-5)' }}>Backtester</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '310px 1fr', gap: 'var(--sp-4)', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: (isMobile || isTablet) ? '1fr' : '310px 1fr', gap: 'var(--sp-4)', alignItems: 'start' }}>
         {/* Form */}
         <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--hl-teal)', marginBottom: 'var(--sp-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>

@@ -3,6 +3,27 @@ import type { FundingRate, FundingEvent, Candle } from '../types/funding';
 import { classifyRate } from '../utils/rateColor';
 import { TRADFI_PAIRS } from '../utils/constants';
 
+// ── Coin → asset index cache ─────────────────────────────────────────────────
+// HL requires a numeric asset index (not symbol string) in every order.
+// We build this map once from the metaAndAssetCtxs response and reuse it.
+const _coinIndexCache: Map<string, number> = new Map();
+
+export function getCoinIndex(coin: string): number | null {
+  const idx = _coinIndexCache.get(coin.toUpperCase());
+  return idx !== undefined ? idx : null;
+}
+
+async function ensureCoinIndex(coin: string): Promise<number> {
+  const cached = _coinIndexCache.get(coin.toUpperCase());
+  if (cached !== undefined) return cached;
+  // Cache is empty — fetch universe to populate it
+  await fetchFundingRates();
+  const idx = _coinIndexCache.get(coin.toUpperCase());
+  if (idx === undefined) throw new Error(`Unknown coin: ${coin}. Not listed on Hyperliquid.`);
+  return idx;
+}
+
+
 function generateMockPairs(): FundingRate[] {
   const pairs = [
     { symbol: 'BTC',    oi: 45_000_000, vol: 120_000_000, base: 0.00018 },
@@ -119,6 +140,10 @@ async function fetchRatesFromHL(): Promise<FundingRate[]> {
   });
   if (!res.ok) throw new Error(`HL API error: ${res.status}`);
   const [meta, assetCtxs] = await res.json();
+  // Populate coin index cache every time we fetch universe
+  meta.universe.forEach((asset: { name: string }, i: number) => {
+    _coinIndexCache.set(asset.name.toUpperCase(), i);
+  });
   return meta.universe.map((asset: { name: string }, i: number) => {
     const ctx = assetCtxs[i];
     const rate = parseFloat(ctx.funding ?? '0');
@@ -244,44 +269,72 @@ export async function fetchAccountState(address: string): Promise<{ balance: num
   }
 }
 
-// Build and submit a market order to Hyperliquid via ethers v6 signing
+// ── Hyperliquid order placement ─────────────────────────────────────────────
+//
+// HL signing protocol (EIP-712 variant):
+//   1. Build the action object with correct asset index (NOT symbol string)
+//   2. Hash: keccak256(abi.encode(actionHash, nonce, vaultAddress=0x0))
+//      where actionHash = keccak256(action JSON bytes)
+//   3. Sign the hash using personal_sign (eth_sign prefix)
+//   4. POST to /exchange with { action, nonce, signature: {r,s,v}, vaultAddress }
+//
+// Reference: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint
+//
 export async function placeMarketOrder(params: {
   coin: string;
   isBuy: boolean;
-  sz: number;        // size in coin units
-  px: number;        // worst acceptable price (slippage guard)
+  sz: number;        // size in coin units (e.g. 0.01 BTC)
+  px: number;        // worst acceptable price (slippage guard for IOC)
   address: string;
-  provider: unknown; // ethers BrowserProvider
+  provider: unknown; // window.ethereum / ethers-compatible provider
 }): Promise<{ success: boolean; orderId?: string; error?: string }> {
   try {
-    // Dynamic import of ethers to avoid SSR issues
     const { ethers } = await import('ethers');
-    const provider = new (ethers.BrowserProvider)(params.provider as ConstructorParameters<typeof ethers.BrowserProvider>[0]);
+
+    // Step 1: Resolve coin → numeric asset index
+    const assetIndex = await ensureCoinIndex(params.coin);
+
+    const provider = new (ethers.BrowserProvider)(
+      params.provider as ConstructorParameters<typeof ethers.BrowserProvider>[0]
+    );
     const signer = await provider.getSigner();
 
-    const timestamp = Date.now();
-    const nonce = timestamp;
-
+    // Step 2: Build action
+    const nonce = Date.now();
     const action = {
       type: 'order',
       orders: [{
-        a: 0, // asset index — HL maps coin to index server-side
-        b: params.isBuy,
-        p: params.px.toString(),
-        s: params.sz.toString(),
-        r: false, // not reduce-only
-        t: { limit: { tif: 'Ioc' } }, // Immediate or Cancel = market-like
+        a: assetIndex,           // correct asset index from universe
+        b: params.isBuy,         // true = buy/long, false = sell/short
+        p: params.px.toFixed(6), // price as string, 6dp
+        s: params.sz.toFixed(6), // size as string, 6dp
+        r: false,                // reduce-only: false for new positions
+        t: { limit: { tif: 'Ioc' } }, // IOC = immediate-or-cancel ≈ market order
       }],
       grouping: 'na',
     };
 
-    // HL signing: keccak256 of action JSON + nonce + vault address
-    const msgHash = ethers.keccak256(
-      ethers.toUtf8Bytes(JSON.stringify({ action, nonce, vaultAddress: null }))
+    // Step 3: Hash the action
+    //   actionHash = keccak256(UTF-8 bytes of JSON-serialised action)
+    //   msgHash    = keccak256(abi.encode(actionHash, nonce, address(0)))
+    //   HL uses address(0) for vaultAddress when trading from your own account
+    const actionHash = ethers.keccak256(
+      ethers.toUtf8Bytes(JSON.stringify(action))
     );
+
+    // ABI-encode: (bytes32 actionHash, uint64 nonce, address vaultAddress)
+    const msgHash = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ['bytes32', 'uint64', 'address'],
+        [actionHash, BigInt(nonce), ethers.ZeroAddress]
+      )
+    );
+
+    // Step 4: Sign with personal_sign (adds the ETH message prefix)
     const sig = await signer.signMessage(ethers.getBytes(msgHash));
     const { r, s, v } = ethers.Signature.from(sig);
 
+    // Step 5: Submit
     const res = await fetch(`${HL_REST_URL}/exchange`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -293,11 +346,23 @@ export async function placeMarketOrder(params: {
       }),
     });
 
+    if (!res.ok) {
+      return { success: false, error: `HTTP ${res.status}: ${res.statusText}` };
+    }
+
     const data = await res.json();
     if (data.status === 'ok') {
-      return { success: true, orderId: data.response?.data?.statuses?.[0]?.resting?.oid?.toString() };
+      const status = data.response?.data?.statuses?.[0];
+      const orderId = (status?.resting?.oid ?? status?.filled?.oid)?.toString();
+      return { success: true, orderId };
     }
-    return { success: false, error: data.response?.data?.statuses?.[0]?.error ?? 'Unknown error' };
+
+    // HL returns error details in statuses array
+    const errMsg = data.response?.data?.statuses?.[0]?.error
+      ?? data.error
+      ?? JSON.stringify(data);
+    return { success: false, error: errMsg };
+
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : String(e) };
   }

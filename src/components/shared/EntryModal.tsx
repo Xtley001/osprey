@@ -109,7 +109,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({ pair, onClose }) => {
           background: 'var(--bg-overlay)',
           border: `1px solid ${isReal ? 'rgba(245,197,66,0.35)' : 'var(--glass-border-hl)'}`,
           borderRadius: 'var(--r-xl)', padding: 'var(--sp-6)',
-          width: 420, maxWidth: '92vw',
+          width: 420, maxWidth: '92vw', maxHeight: '90vh', overflowY: 'auto',
           boxShadow: '0 8px 48px rgba(0,0,0,0.8)',
         }}
       >

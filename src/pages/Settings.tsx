@@ -89,7 +89,7 @@ const Settings: React.FC = () => {
         <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={15} color="var(--hl-teal)" /> Account Mode
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)' }}>
+        <div className="grid-2" style={{ marginBottom: 'var(--sp-4)' }}>
           <button onClick={() => setMode('demo')} style={{
             padding: 'var(--sp-4)', borderRadius: 'var(--r-md)', cursor: 'pointer', textAlign: 'left',
             border: `1px solid ${mode === 'demo' ? 'var(--accent-blue)' : 'var(--glass-border)'}`,
@@ -194,7 +194,7 @@ const Settings: React.FC = () => {
         <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <RefreshCw size={15} color="var(--hl-teal)" /> Demo Account
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)' }}>
+        <div className="grid-3" style={{ marginBottom: 'var(--sp-4)' }}>
           {[
             { label: 'Balance',         value: formatUSD(demo.balance),        color: 'var(--text-primary)' },
             { label: 'Funding Earned',  value: '+' + formatUSD(demo.fundingEarned), color: 'var(--accent-green)' },

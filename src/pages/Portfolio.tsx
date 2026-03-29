@@ -5,6 +5,7 @@ import { useAppStore } from '../store/appStore';
 import { formatUSD, formatRateRaw, formatDuration, formatPct } from '../utils/format';
 import { AlertTriangle, RefreshCw, TrendingUp, ExternalLink } from 'lucide-react';
 import { toast } from '../components/shared/Toast';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const Portfolio: React.FC = () => {
   const navigate   = useNavigate();
@@ -16,6 +17,7 @@ const Portfolio: React.FC = () => {
   const demo       = useAppStore(s => s.demo);
 
   const [confirmClose, setConfirmClose] = useState<string | null>(null);
+  const { isMobile } = useBreakpoint();
 
   // Totals include both open (unrealised) and closed (realised)
   const openFunding  = positions.reduce((s, p) => s + p.fundingEarned, 0);
@@ -89,7 +91,7 @@ const Portfolio: React.FC = () => {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-3)', marginBottom: 'var(--sp-5)' }}>
+      <div className="grid-stats" style={{ marginBottom: 'var(--sp-5)' }}>
         {[
           { label: 'Account Balance', value: formatUSD(mode === 'demo' ? demo.balance : 0), color: 'var(--hl-teal)' },
           { label: 'Total Funding',   value: '+' + formatUSD(totalFunding),  color: 'var(--accent-green)' },
@@ -125,8 +127,8 @@ const Portfolio: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--r-lg)', overflow: 'auto', marginBottom: 'var(--sp-5)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+        <div className="table-wrap" style={{ background: 'var(--bg-surface)', marginBottom: 'var(--sp-5)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
                 {['Pair', 'Entry', 'Notional', 'Rate', 'Funding', 'Fees', 'Net PnL', 'Held', 'Drift', ''].map(h => (

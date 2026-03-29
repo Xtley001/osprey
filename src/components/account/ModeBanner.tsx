@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { formatUSD } from '../../utils/format';
 
 const ModeBanner: React.FC = () => {
@@ -10,6 +11,7 @@ const ModeBanner: React.FC = () => {
   const resetDemo = useAppStore(s => s.resetDemo);
 
   const isDemo = mode === 'demo';
+  const { isMobile } = useBreakpoint();
 
   // Demo = muted blue (practice/safe)   Real = gold/amber (live/premium)
   const demoBg     = 'rgba(91,141,238,0.07)';
@@ -23,7 +25,7 @@ const ModeBanner: React.FC = () => {
     <div style={{
       background: isDemo ? demoBg : realBg,
       borderBottom: `1px solid ${isDemo ? demoBorder : realBorder}`,
-      padding: '5px var(--sp-4)',
+      padding: isMobile ? '4px 12px' : '5px var(--sp-4)',
       display: 'flex', alignItems: 'center', gap: 'var(--sp-4)',
       flexShrink: 0, fontSize: 12,
     }}>
