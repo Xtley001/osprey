@@ -163,7 +163,10 @@ select.input option { background: var(--bg-overlay); }
   background: var(--bg-surface);
   border-top: 1px solid var(--glass-border);
   z-index: 100;
-  padding: 6px 0 env(safe-area-inset-bottom, 6px);
+  padding: 6px 4px env(safe-area-inset-bottom, 6px);
+  justify-content: space-around;
+  align-items: center;
+  gap: 0;
 }
 
 /* ── Breakpoints ─────────────────────────────────────────────────────── */

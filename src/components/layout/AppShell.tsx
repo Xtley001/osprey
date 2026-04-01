@@ -14,11 +14,12 @@ import { toast } from '../shared/Toast';
 import { usePositionStore } from '../../store/positionStore';
 
 const NAV = [
-  { to: '/',           icon: LayoutGrid, label: 'Scanner'    },
-  { to: '/backtest',   icon: Activity,   label: 'Backtest'   },
-  { to: '/portfolio',  icon: Briefcase,  label: 'Portfolio'  },
-  { to: '/analytics',  icon: BarChart2,  label: 'Analytics'  },
-  { to: '/settings',   icon: Settings,   label: 'Settings'   },
+  { to: '/',            icon: LayoutGrid, label: 'Scanner'   },
+  { to: '/backtest',    icon: Activity,   label: 'Backtest'  },
+  { to: '/autotrader',  icon: Bot,        label: 'Auto'      },
+  { to: '/portfolio',   icon: Briefcase,  label: 'Portfolio' },
+  { to: '/analytics',   icon: BarChart2,  label: 'Analytics' },
+  { to: '/settings',    icon: Settings,   label: 'Settings'  },
 ];
 
 // Mobile bottom navigation bar
@@ -30,14 +31,15 @@ const MobileNav: React.FC = () => (
         to={to}
         end={to === '/'}
         style={({ isActive }) => ({
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           color: isActive ? 'var(--hl-teal)' : 'var(--text-muted)',
-          textDecoration: 'none', padding: '4px 8px', fontSize: 10,
-          fontFamily: 'var(--font-display)', fontWeight: 500,
-          minWidth: 48,
+          textDecoration: 'none', padding: '4px 4px', fontSize: 9,
+          fontFamily: 'var(--font-body)', fontWeight: 500,
+          minWidth: 44, flex: 1,
+          letterSpacing: '0.02em',
         })}
       >
-        <Icon size={20} />
+        <Icon size={18} />
         {label}
       </NavLink>
     ))}
