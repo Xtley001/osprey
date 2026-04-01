@@ -54,9 +54,26 @@
   --sp-10: 40px;
 
   /* ── Typography ── */
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
-  --font-body:    'Space Grotesk', sans-serif;
+  --font-display: 'Syne', sans-serif;       /* page titles, stat values, nav labels */
+  --font-body:    'Inter', sans-serif;       /* all UI text, labels, descriptions    */
+  --font-mono:    'JetBrains Mono', monospace; /* rates, prices, numbers, code      */
+
+  /* ── Type scale ── */
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 13px;
+  --text-md:   14px;
+  --text-lg:   16px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
+  --text-3xl:  30px;
+
+  /* ── Letter spacing ── */
+  --ls-tight:  -0.02em;
+  --ls-normal:  0em;
+  --ls-wide:    0.04em;
+  --ls-wider:   0.08em;
+  --ls-widest:  0.12em;
 
   /* ── Shadows ── */
   --shadow-card:    0 2px 16px rgba(0,0,0,0.6);

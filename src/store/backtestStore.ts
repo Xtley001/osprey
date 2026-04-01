@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { BacktestParams, BacktestResult } from '../types/backtest';
 import { runBacktest } from '../engine/backtester';
 import { fetchFundingHistory, fetchCandles } from '../api/hyperliquid';
+import { toast } from '../components/shared/Toast';
 
 interface BacktestStore {
   params:       BacktestParams | null;
@@ -70,9 +71,22 @@ export const useBacktestStore = create<BacktestStore>((set, get) => ({
   saveResult: () => {
     const { result, savedResults } = get();
     if (!result) return;
-    const updated = [result, ...savedResults].slice(0, 10);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    set({ savedResults: updated });
+
+    // Prevent saving the exact same run twice (same runAt timestamp)
+    const alreadySaved = savedResults.some(r => r.runAt === result.runAt);
+    if (alreadySaved) {
+      toast.warning('This result is already saved.');
+      return;
+    }
+
+    try {
+      const updated = [result, ...savedResults].slice(0, 10);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      set({ savedResults: updated });
+      toast.success(`Saved — ${updated.length}/10 results stored`);
+    } catch {
+      toast.error('Save failed — localStorage may be full or blocked');
+    }
   },
 
   clearResult: () => set({ result: null, error: null }),

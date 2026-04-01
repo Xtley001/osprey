@@ -125,7 +125,7 @@ const Backtester: React.FC = () => {
   const preSymbol = searchParams.get('symbol') ?? 'BTC';
 
   const pairs = useScannerStore(s => s.pairs);
-  const { result, isRunning, error, runBacktest: run, saveResult, clearResult } = useBacktestStore();
+  const { result, isRunning, error, runBacktest: run, saveResult, clearResult, savedResults } = useBacktestStore();
 
   const [symbol, setSymbol]     = useState(preSymbol);
   const [range, setRange]       = useState<'30' | '90' | '180'>('30');
@@ -274,9 +274,20 @@ const Backtester: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 12 }} onClick={saveResult}>
-                    <Save size={13} /> Save
-                  </button>
+                  {(() => {
+                    const alreadySaved = savedResults.some(r => r.runAt === result.runAt);
+                    return (
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '5px 12px', fontSize: 12, opacity: alreadySaved ? 0.5 : 1 }}
+                        onClick={saveResult}
+                        disabled={alreadySaved}
+                        title={alreadySaved ? 'Already saved' : 'Save this result'}
+                      >
+                        <Save size={13} /> {alreadySaved ? 'Saved ✓' : 'Save'}
+                      </button>
+                    );
+                  })()}
                   <button className="btn btn-ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={clearResult}>
                     <Trash2 size={13} />
                   </button>
