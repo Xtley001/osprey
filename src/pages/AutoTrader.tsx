@@ -1,109 +1,103 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAutoTraderStore } from '../store/autoTraderStore';
 import { useAppStore } from '../store/appStore';
 import { usePositionStore } from '../store/positionStore';
 import { useScannerStore } from '../store/scannerStore';
 import { formatUSD, formatRateRaw, formatDuration } from '../utils/format';
-import { Power, RefreshCw, Trash2, AlertTriangle, TrendingUp, Zap } from 'lucide-react';
+import { Zap, ZapOff, Trash2, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
-// ── Config row helper ─────────────────────────────────────────────────────────
+// ── Slider row — compact, no long hints inline ────────────────────────────────
 const ConfigRow: React.FC<{
-  label:    string;
-  value:    number;
-  display?: string;
-  min:      number;
-  max:      number;
-  step:     number;
+  label: string; value: number; display?: string;
+  min: number; max: number; step: number;
   onChange: (v: number) => void;
-  hint?:    string;
-}> = ({ label, value, display, min, max, step, onChange, hint }) => (
-  <div style={{ marginBottom: 'var(--sp-4)' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-      <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</label>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
+}> = ({ label, value, display, min, max, step, onChange }) => (
+  <div style={{ marginBottom: 'var(--sp-3)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+      <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</label>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--hl-teal)', fontWeight: 700 }}>
         {display ?? value}
       </span>
     </div>
     <input
       type="range" min={min} max={max} step={step} value={value}
       onChange={e => onChange(parseFloat(e.target.value))}
-      style={{ width: '100%', accentColor: 'var(--hl-teal)' }}
+      style={{ width: '100%', accentColor: 'var(--hl-teal)', height: 4 }}
     />
-    {hint && <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{hint}</p>}
   </div>
 );
 
-// ── Activity log ─────────────────────────────────────────────────────────────
-const ActivityLog: React.FC = () => {
+// ── Toggle switch (ON/OFF pill) ───────────────────────────────────────────────
+const ToggleSwitch: React.FC<{ on: boolean; onChange: () => void; label: string; desc: string }> = ({ on, onChange, label, desc }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--glass-border)' }}>
+    <div style={{ minWidth: 0 }}>
+      <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</p>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{desc}</p>
+    </div>
+    <button
+      onClick={onChange}
+      style={{
+        flexShrink: 0,
+        width: 44, height: 24, borderRadius: 12,
+        background: on ? 'var(--accent-green)' : 'var(--bg-elevated)',
+        border: `1px solid ${on ? 'var(--accent-green)' : 'var(--glass-border)'}`,
+        cursor: 'pointer', position: 'relative', transition: 'all 0.2s',
+        padding: 0,
+      }}
+      aria-label={`Toggle ${label}`}
+    >
+      <span style={{
+        position: 'absolute', top: 2, left: on ? 22 : 2,
+        width: 18, height: 18, borderRadius: '50%',
+        background: on ? '#0a0b0f' : 'var(--text-muted)',
+        transition: 'left 0.2s',
+        display: 'block',
+      }} />
+    </button>
+  </div>
+);
+
+// ── Activity log ──────────────────────────────────────────────────────────────
+const ActivityLog: React.FC<{ maxH?: number }> = ({ maxH = 280 }) => {
   const log      = useAutoTraderStore(s => s.log);
   const clearLog = useAutoTraderStore(s => s.clearLog);
-
-  const colors = {
-    ENTRY:  'var(--accent-green)',
-    EXIT:   'var(--accent-yellow)',
-    ROTATE: 'var(--hl-teal)',
-    SKIP:   'var(--text-muted)',
-    ERROR:  'var(--accent-red)',
-    INFO:   'var(--text-secondary)',
-  };
-
-  const icons = {
-    ENTRY:  '↗',
-    EXIT:   '↙',
-    ROTATE: '↻',
-    SKIP:   '–',
-    ERROR:  '⚠',
-    INFO:   'i',
-  };
+  const colors   = { ENTRY: 'var(--accent-green)', EXIT: 'var(--accent-yellow)', ROTATE: 'var(--hl-teal)', SKIP: 'var(--text-muted)', ERROR: 'var(--accent-red)', INFO: 'var(--text-secondary)' };
+  const icons    = { ENTRY: '↗', EXIT: '↙', ROTATE: '↻', SKIP: '–', ERROR: '⚠', INFO: '·' };
 
   return (
-    <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>
+    <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-3)' }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Activity Log
-        </p>
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activity Log</p>
         {log.length > 0 && (
           <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }} onClick={clearLog}>
             <Trash2 size={11} /> Clear
           </button>
         )}
       </div>
-
       {log.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', fontSize: 12, padding: '16px 0', textAlign: 'center' }}>
-          No activity yet. Enable the auto-trader to start.
+        <p style={{ color: 'var(--text-muted)', fontSize: 12, padding: '20px 0', textAlign: 'center' }}>
+          No activity yet — enable auto-trader to start.
         </p>
       ) : (
-        <div style={{ maxHeight: 320, overflow: 'auto' }}>
+        <div style={{ maxHeight: maxH, overflowY: 'auto' }}>
           {log.map(entry => (
-            <div key={entry.id} style={{
-              display: 'flex', gap: 10, padding: '6px 0',
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
-              alignItems: 'flex-start',
-            }}>
-              <span style={{ color: colors[entry.type], fontSize: 12, fontWeight: 700, flexShrink: 0, width: 14, textAlign: 'center' }}>
+            <div key={entry.id} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'flex-start' }}>
+              <span style={{ color: colors[entry.type], fontSize: 13, fontWeight: 700, flexShrink: 0, width: 16, textAlign: 'center', lineHeight: 1.3 }}>
                 {icons[entry.type]}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                    {entry.symbol && <strong style={{ color: 'var(--text-primary)', marginRight: 5 }}>{entry.symbol}</strong>}
-                    {entry.message}
-                  </span>
-                  {entry.rate !== undefined && (
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>
-                      {(entry.rate * 100).toFixed(4)}%
-                    </span>
-                  )}
-                </div>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  {entry.symbol && <strong style={{ color: 'var(--text-primary)', marginRight: 5 }}>{entry.symbol}</strong>}
+                  {entry.message}
+                </p>
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
                   {new Date(entry.timestamp).toLocaleTimeString()}
-                </span>
+                  {entry.rate !== undefined && ` · ${(entry.rate * 100).toFixed(4)}%`}
+                </p>
               </div>
               {entry.pnl !== undefined && (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, flexShrink: 0,
-                  color: entry.pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)',
-                }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, flexShrink: 0, color: entry.pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                   {entry.pnl >= 0 ? '+' : ''}{formatUSD(entry.pnl)}
                 </span>
               )}
@@ -111,11 +105,133 @@ const ActivityLog: React.FC = () => {
           ))}
         </div>
       )}
+    </>
+  );
+};
+
+// ── Collapsible accordion card ────────────────────────────────────────────────
+const Accordion: React.FC<{ title: string; subtitle?: string; defaultOpen?: boolean; children: React.ReactNode; accent?: boolean }> = ({
+  title, subtitle, defaultOpen = false, children, accent = false,
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass-card" style={{ overflow: 'hidden', marginBottom: 10 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 16px', gap: 8,
+        }}
+      >
+        <div style={{ textAlign: 'left' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: accent ? 'var(--hl-teal)' : 'var(--text-primary)' }}>{title}</p>
+          {subtitle && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{subtitle}</p>}
+        </div>
+        {open
+          ? <ChevronUp size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+          : <ChevronDown size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+        }
+      </button>
+      {open && (
+        <div style={{ padding: '0 16px 16px' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 };
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Position card ─────────────────────────────────────────────────────────────
+const PositionCard: React.FC<{ pos: ReturnType<typeof usePositionStore.getState>['positions'][0] }> = ({ pos }) => {
+  const net = pos.fundingEarned - pos.feesPaid;
+  return (
+    <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--r-md)', padding: '12px 14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontWeight: 700, fontSize: 15, fontFamily: 'var(--font-display)' }}>{pos.symbol}</span>
+        <span className={`rate-badge ${pos.currentRate > 0.0005 ? 'hot' : pos.currentRate > 0.0002 ? 'warm' : 'cold'}`}>
+          {formatRateRaw(pos.currentRate)}/hr
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+        {([
+          ['Notional', formatUSD(pos.notional),        'var(--text-primary)'],
+          ['Held',     formatDuration(pos.hoursHeld),  'var(--text-primary)'],
+          ['Earned',   '+' + formatUSD(pos.fundingEarned), 'var(--accent-green)'],
+          ['Net P&L',  (net >= 0 ? '+' : '') + formatUSD(net), net >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'],
+        ] as [string, string, string][]).map(([label, val, color]) => (
+          <div key={label}>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 2 }}>{label}</p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 13, color }}>{val}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── Main toggle button — pill shaped, not square ──────────────────────────────
+const MainToggle: React.FC<{ enabled: boolean; canEnable: boolean; running: boolean; onToggle: () => void; fullWidth?: boolean }> = ({
+  enabled, canEnable, running, onToggle, fullWidth,
+}) => {
+  const Icon = enabled ? ZapOff : Zap;
+  return (
+    <button
+      onClick={() => canEnable && onToggle()}
+      disabled={!canEnable}
+      aria-label={enabled ? 'Stop Auto-Trader' : 'Start Auto-Trader'}
+      style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+        paddingTop: 0, paddingBottom: 0,
+        height: fullWidth ? 52 : 40,
+        paddingLeft: fullWidth ? 24 : 22,
+        paddingRight: fullWidth ? 24 : 22,
+        width: fullWidth ? '100%' : 'auto',
+        borderRadius: 100, // pill
+        border: enabled ? '1.5px solid rgba(255,79,110,0.4)' : '1.5px solid transparent',
+        background: enabled
+          ? 'rgba(255,79,110,0.12)'
+          : canEnable
+            ? 'var(--accent-green)'
+            : 'var(--bg-elevated)',
+        color: enabled
+          ? 'var(--accent-red)'
+          : canEnable ? '#0a0b0f' : 'var(--text-muted)',
+        cursor: canEnable ? 'pointer' : 'not-allowed',
+        fontFamily: 'var(--font-display)', fontWeight: 700,
+        fontSize: fullWidth ? 16 : 14,
+        letterSpacing: '-0.01em',
+        transition: 'all 0.2s',
+        boxShadow: (!enabled && canEnable) ? '0 0 20px rgba(0,212,160,0.25)' : 'none',
+      }}
+    >
+      <Icon size={fullWidth ? 18 : 16} />
+      {enabled ? (running ? 'Running…' : 'Stop') : 'Start Auto-Trader'}
+    </button>
+  );
+};
+
+// ── Config panel shared between mobile + desktop ──────────────────────────────
+const ConfigPanel: React.FC<{
+  config: ReturnType<typeof useAutoTraderStore.getState>['config'];
+  update: (d: Partial<ReturnType<typeof useAutoTraderStore.getState>['config']>) => void;
+}> = ({ config, update }) => (
+  <>
+    <ConfigRow label="Capital per position" value={config.capitalPerPosition} display={formatUSD(config.capitalPerPosition)} min={100} max={50000} step={100} onChange={v => update({ capitalPerPosition: v })} />
+    <ConfigRow label="Max open positions" value={config.maxPositions} min={1} max={5} step={1} onChange={v => update({ maxPositions: v })} />
+    <ConfigRow label="Entry rate threshold" value={config.entryThreshold} display={`${(config.entryThreshold * 100).toFixed(3)}%/hr`} min={0.0001} max={0.005} step={0.0001} onChange={v => update({ entryThreshold: v })} />
+    <ConfigRow label="Exit rate threshold" value={config.exitThreshold} display={`${(config.exitThreshold * 100).toFixed(3)}%/hr`} min={0.00005} max={0.002} step={0.00005} onChange={v => update({ exitThreshold: v })} />
+    <ConfigRow label="Min hours elevated" value={config.minHoursElevated} min={1} max={6} step={1} onChange={v => update({ minHoursElevated: v })} />
+    <ConfigRow label="Max hold time" value={config.maxHoldHours} display={formatDuration(config.maxHoldHours)} min={6} max={168} step={6} onChange={v => update({ maxHoldHours: v })} />
+    <ConfigRow label="Min open interest" value={config.minOI} display={formatUSD(config.minOI)} min={100000} max={10000000} step={100000} onChange={v => update({ minOI: v })} />
+    <div style={{ marginTop: 4 }}>
+      <ToggleSwitch on={config.rotationEnabled} onChange={() => update({ rotationEnabled: !config.rotationEnabled })} label="Auto-rotate" desc="Move to higher-rate pair when profitable after fees" />
+      <ToggleSwitch on={config.regimeGate} onChange={() => update({ regimeGate: !config.regimeGate })} label="Regime gate" desc="Pause new entries when market is COLD" />
+    </div>
+  </>
+);
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 const AutoTrader: React.FC = () => {
   const { config, running, lastRunAt, nextRunAt, totalAutoEarned, totalAutoFees, updateConfig, toggle } = useAutoTraderStore();
   const mode      = useAppStore(s => s.mode);
@@ -123,93 +239,202 @@ const AutoTrader: React.FC = () => {
   const positions = usePositionStore(s => s.positions);
   const pairs     = useScannerStore(s => s.pairs);
   const regime    = useAppStore(s => s.regime);
+  const { isMobile } = useBreakpoint();
 
   const autoPositions = positions.filter(p => p.isDemo === (mode === 'demo'));
   const netProfit     = totalAutoEarned - totalAutoFees;
-
-  // Best available pair right now
-  const bestPair = [...pairs]
+  const bestPair      = [...pairs]
     .filter(p => p.currentRate >= config.entryThreshold && p.openInterest >= config.minOI)
     .sort((a, b) => b.currentRate - a.currentRate)[0];
+  const canEnable     = mode === 'demo' || (mode === 'real' && wallet.connected);
+  const minsToNext    = nextRunAt > 0 ? Math.max(0, Math.round((nextRunAt - Date.now()) / 60000)) : null;
 
-  const canEnable = mode === 'demo' || (mode === 'real' && wallet.connected);
+  const regimeEmoji   = regime.label === 'HOT' ? '🔥' : regime.label === 'NEUTRAL' ? '🌤' : '🧊';
+  const regimeColor   = regime.label === 'HOT' ? 'var(--accent-orange)' : regime.label === 'NEUTRAL' ? 'var(--hl-teal)' : 'var(--text-muted)';
 
-  const minsToNext = nextRunAt > 0
-    ? Math.max(0, Math.round((nextRunAt - Date.now()) / 60000))
-    : null;
+  // ── MOBILE ─────────────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="fade-in" style={{ paddingTop: 'var(--sp-3)', paddingBottom: 80 }}>
 
+        {/* ── Header row ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-3)' }}>
+          <div>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, lineHeight: 1 }}>
+              Auto-Trader
+            </h1>
+            {lastRunAt > 0 && (
+              <p style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 3 }}>
+                Last: {new Date(lastRunAt).toLocaleTimeString()}
+                {minsToNext !== null && ` · next ~${minsToNext}m`}
+              </p>
+            )}
+          </div>
+          {/* Status pill — only shown when active */}
+          {config.enabled && (
+            <span style={{
+              fontSize: 11, padding: '4px 10px', borderRadius: 100, fontWeight: 700,
+              background: running ? 'rgba(245,197,66,0.15)' : 'rgba(0,212,160,0.12)',
+              color: running ? 'var(--accent-yellow)' : 'var(--accent-green)',
+              border: `1px solid ${running ? 'rgba(245,197,66,0.3)' : 'rgba(0,212,160,0.25)'}`,
+            }}>
+              {running ? '⟳ Running' : '● Active'}
+            </span>
+          )}
+        </div>
+
+        {/* ── Wallet warning ── */}
+        {mode === 'real' && !wallet.connected && (
+          <div style={{
+            background: 'rgba(255,79,110,0.08)', border: '1px solid rgba(255,79,110,0.25)',
+            borderRadius: 'var(--r-md)', padding: '10px 14px', marginBottom: 'var(--sp-3)',
+            display: 'flex', gap: 10, alignItems: 'flex-start',
+          }}>
+            <AlertTriangle size={14} color="var(--accent-red)" style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              <strong style={{ color: 'var(--accent-red)' }}>Wallet not connected.</strong>{' '}
+              Go to Settings to connect MetaMask.
+            </p>
+          </div>
+        )}
+
+        {/* ── Stats row — 4 equal tiles ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 'var(--sp-3)' }}>
+          {[
+            { label: 'Regime',  value: `${regimeEmoji}`, sub: regime.label, color: regimeColor },
+            { label: 'Open',    value: `${autoPositions.length}/${config.maxPositions}`, color: 'var(--text-primary)' },
+            { label: 'Earned',  value: formatUSD(totalAutoEarned), color: 'var(--accent-green)' },
+            { label: 'Net',     value: (netProfit >= 0 ? '+' : '') + formatUSD(netProfit), color: netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--r-md)', padding: '8px 6px', textAlign: 'center' }}>
+              <p style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: s.color, lineHeight: 1.1 }}>{s.value}</p>
+              {'sub' in s && s.sub && <p style={{ fontSize: 9, color: s.color, marginTop: 1 }}>{s.sub}</p>}
+            </div>
+          ))}
+        </div>
+
+        {/* ── Main toggle — full-width pill ── */}
+        <div style={{ marginBottom: 'var(--sp-3)' }}>
+          <MainToggle enabled={config.enabled} canEnable={canEnable} running={running} onToggle={toggle} fullWidth />
+        </div>
+
+        {/* ── Best opportunity ── */}
+        {bestPair && (
+          <div style={{
+            background: 'var(--bg-surface)', border: '1px solid rgba(67,232,216,0.2)',
+            borderRadius: 'var(--r-md)', padding: '12px 14px', marginBottom: 'var(--sp-3)',
+          }}>
+            <p style={{ fontSize: 10, color: 'var(--hl-teal)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+              ⚡ Best Opportunity Now
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17 }}>{bestPair.symbol}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{bestPair.category} · OI {formatUSD(bestPair.openInterest)}</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className={`rate-badge ${bestPair.heat}`} style={{ fontSize: 13 }}>{formatRateRaw(bestPair.currentRate)}/hr</span>
+                <p style={{ fontSize: 11, color: 'var(--accent-green)', fontFamily: 'var(--font-mono)', marginTop: 5 }}>
+                  +{formatUSD(bestPair.currentRate * config.capitalPerPosition / 2)}/hr est.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Active positions — open by default only if there are positions ── */}
+        {autoPositions.length > 0 ? (
+          <Accordion
+            title={`Active Positions (${autoPositions.length})`}
+            subtitle={`+${formatUSD(autoPositions.reduce((s, p) => s + p.fundingEarned, 0))} accruing`}
+            defaultOpen={true}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {autoPositions.map(pos => <PositionCard key={pos.id} pos={pos} />)}
+            </div>
+          </Accordion>
+        ) : (
+          <div style={{
+            background: 'var(--bg-surface)', border: '1px solid var(--glass-border)',
+            borderRadius: 'var(--r-md)', padding: '14px 16px', marginBottom: 10,
+            textAlign: 'center', color: 'var(--text-muted)', fontSize: 12,
+          }}>
+            {config.enabled
+              ? 'Watching for opportunities — will enter when conditions are met'
+              : 'Tap Start Auto-Trader to begin'}
+          </div>
+        )}
+
+        {/* ── Strategy config — collapsed ── */}
+        <Accordion title="Strategy Settings" subtitle="Tap to configure thresholds & limits" defaultOpen={false} accent>
+          <ConfigPanel config={config} update={updateConfig} />
+        </Accordion>
+
+        {/* ── Activity log — collapsed ── */}
+        <Accordion
+          title="Activity Log"
+          subtitle={autoPositions.length > 0 || useAutoTraderStore.getState().log.length > 0 ? `${useAutoTraderStore.getState().log.length} events` : 'No events yet'}
+          defaultOpen={false}
+        >
+          <ActivityLog maxH={220} />
+        </Accordion>
+
+      </div>
+    );
+  }
+
+  // ── DESKTOP ─────────────────────────────────────────────────────────────────
   return (
     <div className="fade-in" style={{ paddingTop: 'var(--sp-4)' }}>
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--sp-5)' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 10 }}>
             Auto-Trader
             {config.enabled && (
-              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-sm)', fontWeight: 700,
-                background: running ? 'rgba(245,197,66,0.15)' : 'rgba(0,212,160,0.15)',
-                color:      running ? 'var(--accent-yellow)'   : 'var(--accent-green)',
-                border: `1px solid ${running ? 'rgba(245,197,66,0.3)' : 'rgba(0,212,160,0.3)'}`,
-                animation: running ? 'pulse-hot 1.5s ease-in-out infinite' : 'none',
+              <span style={{
+                fontSize: 11, padding: '3px 10px', borderRadius: 100, fontWeight: 700,
+                background: running ? 'rgba(245,197,66,0.12)' : 'rgba(0,212,160,0.12)',
+                color: running ? 'var(--accent-yellow)' : 'var(--accent-green)',
+                border: `1px solid ${running ? 'rgba(245,197,66,0.3)' : 'rgba(0,212,160,0.25)'}`,
               }}>
                 {running ? '⟳ Running cycle…' : '● Active'}
               </span>
             )}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-            Automatically enters, manages, and exits positions based on your strategy parameters.
+            Enters, manages, and exits positions automatically every 60s.
             {lastRunAt > 0 && (
               <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                Last run {new Date(lastRunAt).toLocaleTimeString()}
+                Last: {new Date(lastRunAt).toLocaleTimeString()}
                 {minsToNext !== null && ` · next in ~${minsToNext}m`}
               </span>
             )}
           </p>
         </div>
-
-        {/* Master toggle */}
-        <button
-          onClick={() => canEnable && toggle()}
-          disabled={!canEnable}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 20px', borderRadius: 'var(--r-md)', border: 'none',
-            background: config.enabled
-              ? 'rgba(255,79,110,0.15)'
-              : canEnable ? 'var(--accent-green)' : 'var(--bg-elevated)',
-            color: config.enabled
-              ? 'var(--accent-red)'
-              : canEnable ? '#0a0b0f' : 'var(--text-muted)',
-            cursor: canEnable ? 'pointer' : 'not-allowed',
-            fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
-            outline: config.enabled ? '1px solid rgba(255,79,110,0.3)' : 'none',
-            transition: 'all var(--t-normal)',
-          }}
-        >
-          <Power size={16} />
-          {config.enabled ? 'Stop Auto-Trader' : 'Start Auto-Trader'}
-        </button>
+        <MainToggle enabled={config.enabled} canEnable={canEnable} running={running} onToggle={toggle} />
       </div>
 
-      {/* Real mode wallet warning */}
+      {/* Wallet warning */}
       {mode === 'real' && !wallet.connected && (
-        <div style={{ background: 'rgba(255,79,110,0.1)', border: '1px solid rgba(255,79,110,0.3)', borderRadius: 'var(--r-md)', padding: 'var(--sp-4)', marginBottom: 'var(--sp-4)', display: 'flex', gap: 10 }}>
+        <div style={{ background: 'rgba(255,79,110,0.08)', border: '1px solid rgba(255,79,110,0.25)', borderRadius: 'var(--r-md)', padding: 'var(--sp-4)', marginBottom: 'var(--sp-4)', display: 'flex', gap: 10 }}>
           <AlertTriangle size={14} color="var(--accent-red)" style={{ flexShrink: 0, marginTop: 1 }} />
           <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--accent-red)' }}>Wallet not connected.</strong>{' '}
-            Connect MetaMask in Settings before enabling auto-trader in Live mode.
+            <strong style={{ color: 'var(--accent-red)' }}>Wallet not connected.</strong> Connect MetaMask in Settings before enabling live auto-trading.
           </p>
         </div>
       )}
 
-      {/* Stats row */}
+      {/* Stats strip */}
       <div className="grid-stats" style={{ marginBottom: 'var(--sp-5)' }}>
         {[
-          { label: 'Regime',           value: `${regime.label === 'HOT' ? '🔥' : regime.label === 'NEUTRAL' ? '🌤' : '🧊'} ${regime.label}`, color: regime.label === 'HOT' ? 'var(--accent-orange)' : regime.label === 'NEUTRAL' ? 'var(--hl-teal)' : 'var(--text-muted)' },
-          { label: 'Active Positions', value: String(autoPositions.length) + ' / ' + config.maxPositions, color: 'var(--text-primary)' },
-          { label: 'Auto Earned',      value: '+' + formatUSD(totalAutoEarned), color: 'var(--accent-green)' },
-          { label: 'Auto Fees',        value: '−' + formatUSD(totalAutoFees),   color: 'var(--accent-red)' },
-          { label: 'Net Profit',       value: (netProfit >= 0 ? '+' : '') + formatUSD(netProfit), color: netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
+          { label: 'Regime',     value: `${regimeEmoji} ${regime.label}`, color: regimeColor },
+          { label: 'Positions',  value: `${autoPositions.length} / ${config.maxPositions}`, color: 'var(--text-primary)' },
+          { label: 'Earned',     value: '+' + formatUSD(totalAutoEarned), color: 'var(--accent-green)' },
+          { label: 'Fees',       value: '−' + formatUSD(totalAutoFees),   color: 'var(--accent-red)' },
+          { label: 'Net Profit', value: (netProfit >= 0 ? '+' : '') + formatUSD(netProfit), color: netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
         ].map(s => (
           <div key={s.label} className="glass-card" style={{ padding: 'var(--sp-3) var(--sp-4)' }}>
             <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>{s.label}</p>
@@ -218,106 +443,27 @@ const AutoTrader: React.FC = () => {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 'var(--sp-4)', alignItems: 'start' }}>
-        {/* Config panel */}
+      {/* Two-column layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 'var(--sp-4)', alignItems: 'start' }}>
+
+        {/* Left — config + best pair */}
         <div>
-          <div className="glass-card" style={{ padding: 'var(--sp-4)', marginBottom: 'var(--sp-4)' }}>
+          <div className="glass-card" style={{ padding: 'var(--sp-4)', marginBottom: 'var(--sp-3)' }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--hl-teal)', marginBottom: 'var(--sp-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Strategy Configuration
             </p>
-
-            <ConfigRow
-              label="Capital per position (USDC)"
-              value={config.capitalPerPosition}
-              display={formatUSD(config.capitalPerPosition)}
-              min={100} max={50000} step={100}
-              onChange={v => updateConfig({ capitalPerPosition: v })}
-              hint="Each position uses this amount split equally across perp and spot legs"
-            />
-            <ConfigRow
-              label="Max concurrent positions"
-              value={config.maxPositions}
-              min={1} max={5} step={1}
-              onChange={v => updateConfig({ maxPositions: v })}
-              hint="Auto-trader won't open more than this many positions at once"
-            />
-            <ConfigRow
-              label="Entry rate threshold"
-              value={config.entryThreshold}
-              display={`${(config.entryThreshold * 100).toFixed(3)}%/hr`}
-              min={0.0001} max={0.005} step={0.0001}
-              onChange={v => updateConfig({ entryThreshold: v })}
-              hint="Only enter when rate is above this. Lower = more trades, higher = only best opportunities"
-            />
-            <ConfigRow
-              label="Exit rate threshold"
-              value={config.exitThreshold}
-              display={`${(config.exitThreshold * 100).toFixed(3)}%/hr`}
-              min={0.00005} max={0.002} step={0.00005}
-              onChange={v => updateConfig({ exitThreshold: v })}
-              hint="Exit when rate drops below this level"
-            />
-            <ConfigRow
-              label="Min hours elevated before entry"
-              value={config.minHoursElevated}
-              min={1} max={6} step={1}
-              onChange={v => updateConfig({ minHoursElevated: v })}
-              hint="Require rate to be elevated for N consecutive hours before entering. Reduces false entries."
-            />
-            <ConfigRow
-              label="Max hold hours"
-              value={config.maxHoldHours}
-              display={formatDuration(config.maxHoldHours)}
-              min={6} max={168} step={6}
-              onChange={v => updateConfig({ maxHoldHours: v })}
-              hint="Force-exit after this many hours regardless of rate"
-            />
-            <ConfigRow
-              label="Min open interest (liquidity filter)"
-              value={config.minOI}
-              display={formatUSD(config.minOI)}
-              min={100000} max={10000000} step={100000}
-              onChange={v => updateConfig({ minOI: v })}
-              hint="Skip pairs with OI below this — low OI means wide spreads and slippage"
-            />
-
-            {/* Toggle switches */}
-            <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 'var(--sp-4)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
-              {[
-                { key: 'rotationEnabled' as const, label: 'Rotation', desc: 'Move to higher-rate pair when profitable after fees' },
-                { key: 'regimeGate'      as const, label: 'Regime gate', desc: 'Pause new entries in COLD regime' },
-              ].map(({ key, label, desc }) => (
-                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 600 }}>{label}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{desc}</p>
-                  </div>
-                  <button
-                    onClick={() => updateConfig({ [key]: !config[key] })}
-                    style={{
-                      background: config[key] ? 'var(--accent-green)' : 'var(--bg-elevated)',
-                      color: config[key] ? '#0a0b0f' : 'var(--text-muted)',
-                      border: 'none', borderRadius: 'var(--r-sm)', padding: '3px 10px',
-                      fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-display)',
-                    }}
-                  >
-                    {config[key] ? 'ON' : 'OFF'}
-                  </button>
-                </div>
-              ))}
-            </div>
+            <ConfigPanel config={config} update={updateConfig} />
           </div>
 
-          {/* Best opportunity now */}
           {bestPair && (
-            <div className="glass-card" style={{ padding: 'var(--sp-4)', borderColor: 'var(--glass-border-hl)' }}>
+            <div className="glass-card" style={{ padding: 'var(--sp-4)', borderColor: 'rgba(67,232,216,0.2)' }}>
               <p style={{ fontSize: 11, color: 'var(--hl-teal)', fontWeight: 600, marginBottom: 'var(--sp-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Best Opportunity Now
+                ⚡ Best Opportunity
               </p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: 16 }}>{bestPair.symbol}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{bestPair.category} · OI {formatUSD(bestPair.openInterest)}</p>
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16 }}>{bestPair.symbol}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{bestPair.category} · OI {formatUSD(bestPair.openInterest)}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className={`rate-badge ${bestPair.heat}`}>{formatRateRaw(bestPair.currentRate)}/hr</span>
@@ -330,71 +476,36 @@ const AutoTrader: React.FC = () => {
           )}
         </div>
 
-        {/* Right column: active positions + log */}
+        {/* Right — positions + log */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
 
-          {/* Active auto positions */}
+          {/* Active positions */}
           <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--sp-3)' }}>
               Active Positions ({autoPositions.length})
             </p>
             {autoPositions.length === 0 ? (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                {config.enabled
-                  ? 'No positions open yet — auto-trader will enter when conditions are met'
-                  : 'Enable auto-trader to start opening positions automatically'}
-              </div>
+              <p style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                {config.enabled ? 'Watching for entries — conditions not yet met' : 'Enable auto-trader to start opening positions'}
+              </p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 'var(--sp-3)' }}>
-                {autoPositions.map(pos => {
-                  const net = pos.fundingEarned - pos.feesPaid;
-                  const hourlyEst = pos.currentRate * pos.notional;
-                  return (
-                    <div key={pos.id} style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--r-md)', padding: 'var(--sp-3)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontWeight: 600, fontSize: 13 }}>{pos.symbol}</span>
-                        <span className={`rate-badge ${pos.currentRate > 0.0005 ? 'hot' : 'cold'}`} style={{ fontSize: 10, padding: '1px 5px' }}>
-                          {formatRateRaw(pos.currentRate)}/hr
-                        </span>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, fontSize: 11 }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Notional</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{formatUSD(pos.notional)}</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>Earned</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', textAlign: 'right', color: 'var(--accent-green)' }}>+{formatUSD(pos.fundingEarned)}</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>Net PnL</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', textAlign: 'right', fontWeight: 600, color: net >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                          {net >= 0 ? '+' : ''}{formatUSD(net)}
-                        </span>
-                        <span style={{ color: 'var(--text-secondary)' }}>Per hour</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', textAlign: 'right', color: 'var(--accent-green)', fontSize: 10 }}>+{formatUSD(hourlyEst)}</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>Held</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{formatDuration(pos.hoursHeld)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--sp-3)' }}>
+                {autoPositions.map(pos => <PositionCard key={pos.id} pos={pos} />)}
               </div>
             )}
           </div>
 
-          <ActivityLog />
+          {/* Activity log */}
+          <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>
+            <ActivityLog maxH={300} />
+          </div>
 
-          {/* How it works */}
-          <div style={{ background: 'rgba(67,232,216,0.04)', border: '1px solid rgba(67,232,216,0.12)', borderRadius: 'var(--r-md)', padding: 'var(--sp-4)', fontSize: 12 }}>
-            <p style={{ color: 'var(--hl-teal)', fontWeight: 600, marginBottom: 8 }}>How auto-trader works</p>
-            <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-              <p>Every time rates refresh (every 60s), the auto-trader runs a cycle:</p>
-              <ol style={{ paddingLeft: 16, marginTop: 6 }}>
-                <li>Check regime — if COLD and regime gate is ON, no new entries</li>
-                <li>Check exits — close any position where rate dropped below exit threshold or max hold reached</li>
-                <li>Check rotations — if a better-rate pair exists and rotation fee breaks even within 3h, rotate</li>
-                <li>Check entries — find pairs above entry threshold with confirmed signal, enter up to max positions</li>
-              </ol>
-              <p style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 11 }}>
-                Demo mode simulates trades with live rates. Live mode requires a connected MetaMask wallet and submits real orders to Hyperliquid.
-              </p>
-            </div>
+          {/* How it works — compact inline info, not a paragraph wall */}
+          <div style={{ display: 'flex', gap: 10, padding: '12px 14px', background: 'rgba(67,232,216,0.04)', border: '1px solid rgba(67,232,216,0.1)', borderRadius: 'var(--r-md)', alignItems: 'flex-start' }}>
+            <Info size={13} color="var(--hl-teal)" style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              Every 60s: <strong style={{ color: 'var(--text-primary)' }}>regime check</strong> → <strong style={{ color: 'var(--text-primary)' }}>exits</strong> → <strong style={{ color: 'var(--text-primary)' }}>rotations</strong> → <strong style={{ color: 'var(--text-primary)' }}>new entries</strong>. Demo uses live rates with no real capital. Live requires MetaMask.
+            </p>
           </div>
         </div>
       </div>
