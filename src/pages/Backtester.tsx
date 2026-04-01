@@ -137,37 +137,55 @@ const Backtester: React.FC = () => {
   const pairs = useScannerStore(s => s.pairs);
   const { result, isRunning, error, runBacktest: run, saveResult, clearResult, savedResults } = useBacktestStore();
 
-  const [symbol, setSymbol]       = useState(preSymbol);
-  const [range, setRange]         = useState<'30' | '90' | '180'>('30');
-  const [strategy, setStrategy]   = useState<StrategyParams>({ ...BT_DEFAULTS });
-  const [formOpen, setFormOpen]   = useState(true);
+  const [symbol, setSymbol]     = useState(preSymbol);
+  const [days,   setDays]       = useState(30);
+  const [strategy, setStrategy] = useState<StrategyParams>({ ...BT_DEFAULTS });
+  const [formOpen, setFormOpen] = useState(true);
 
   const sortedPairs = [...pairs].sort((a, b) => b.openInterest - a.openInterest);
 
   const handleRun = async () => {
     const endDate   = new Date();
-    const startDate = subDays(endDate, parseInt(range));
-    if (isMobile) setFormOpen(false); // collapse form to show results
+    const startDate = subDays(endDate, Math.max(1, days));
+    if (isMobile) setFormOpen(false);
     await run({ symbol, startDate, endDate, strategy, initialCapital: strategy.capitalUSDC, strategyType: 'SINGLE_PAIR' });
   };
 
-  const updateStrat = (key: keyof StrategyParams, rawValue: string, scale = 1) => {
-    const parsed = parseFloat(rawValue);
-    if (!isNaN(parsed)) setStrategy(s => ({ ...s, [key]: scale !== 1 ? parsed / scale : parsed }));
+  const updateStrat = (key: keyof StrategyParams, val: number) => {
+    setStrategy(s => ({ ...s, [key]: val }));
   };
 
-  const paramRows: { label: string; key: keyof StrategyParams; scale?: number; step: number; min: number; max: number; unit?: string }[] = [
-    { label: 'Capital (USDC)',       key: 'capitalUSDC',        step: 500,   min: 500,   max: 100000 },
-    { label: 'Entry Rate',           key: 'entryRateThreshold', step: 0.001, min: 0.001, max: 0.5, scale: 100, unit: '%/hr' },
-    { label: 'Exit Rate',            key: 'exitRateThreshold',  step: 0.001, min: 0.001, max: 0.5, scale: 100, unit: '%/hr' },
-    { label: 'Min Hours Elevated',   key: 'minHoursElevated',   step: 1,     min: 1,     max: 12 },
-    { label: 'Max Hold Hours',       key: 'maxHoldHours',       step: 6,     min: 6,     max: 336 },
-    { label: 'Rebalance Threshold',  key: 'rebalanceThreshold', step: 1,     min: 1,     max: 20, unit: '%' },
-    { label: 'Taker Fee',            key: 'takerFee',           step: 0.001, min: 0.001, max: 0.1, scale: 100, unit: '%' },
+  const paramRows: {
+    label: string; key: keyof StrategyParams;
+    scale?: number; unit?: string;
+    sliderMin: number; sliderMax: number; sliderStep: number;
+    inputMin: number; inputMax: number; inputStep: number;
+    decimals?: number;
+  }[] = [
+    { label: 'Capital (USDC)',      key: 'capitalUSDC',        sliderMin: 500,   sliderMax: 100000, sliderStep: 500,   inputMin: 100,   inputMax: 500000, inputStep: 100,   unit: 'USDC' },
+    { label: 'Entry Rate',          key: 'entryRateThreshold', sliderMin: 0.001, sliderMax: 0.5,    sliderStep: 0.001, inputMin: 0.001, inputMax: 2,      inputStep: 0.001, scale: 100, unit: '%/hr', decimals: 3 },
+    { label: 'Exit Rate',           key: 'exitRateThreshold',  sliderMin: 0.001, sliderMax: 0.5,    sliderStep: 0.001, inputMin: 0.001, inputMax: 2,      inputStep: 0.001, scale: 100, unit: '%/hr', decimals: 3 },
+    { label: 'Min Hours Elevated',  key: 'minHoursElevated',   sliderMin: 1,     sliderMax: 12,     sliderStep: 1,     inputMin: 1,     inputMax: 24,     inputStep: 1,     unit: 'hrs' },
+    { label: 'Max Hold Hours',      key: 'maxHoldHours',       sliderMin: 6,     sliderMax: 336,    sliderStep: 6,     inputMin: 1,     inputMax: 720,    inputStep: 1,     unit: 'hrs' },
+    { label: 'Rebalance Threshold', key: 'rebalanceThreshold', sliderMin: 1,     sliderMax: 20,     sliderStep: 1,     inputMin: 0.1,   inputMax: 50,     inputStep: 0.5,   unit: '%' },
+    { label: 'Taker Fee',           key: 'takerFee',           sliderMin: 0.001, sliderMax: 0.1,    sliderStep: 0.001, inputMin: 0.001, inputMax: 1,      inputStep: 0.001, scale: 100, unit: '%', decimals: 3 },
   ];
+
+  const niceInputStyle: React.CSSProperties = {
+    width: 80, height: 28,
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--glass-border)',
+    borderRadius: 'var(--r-sm)',
+    color: 'var(--hl-teal)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 12, fontWeight: 700,
+    textAlign: 'right',
+    padding: '0 6px', outline: 'none',
+  };
 
   const FormContent = (
     <>
+      {/* Pair */}
       <div style={{ marginBottom: 'var(--sp-3)' }}>
         <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pair</label>
         <select className="input" value={symbol} onChange={e => setSymbol(e.target.value)}>
@@ -176,42 +194,82 @@ const Backtester: React.FC = () => {
           ))}
         </select>
       </div>
-      <div style={{ marginBottom: 'var(--sp-3)' }}>
-        <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Date Range</label>
+
+      {/* Days — free number input + quick preset chips */}
+      <div style={{ marginBottom: 'var(--sp-4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>Backtest period</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <input
+              type="number" min={1} max={365} step={1}
+              value={days}
+              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) setDays(v); }}
+              style={{ ...niceInputStyle, width: 60 }}
+              onFocus={e => (e.target.style.borderColor = 'var(--hl-teal)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--glass-border)')}
+            />
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>days</span>
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: 5 }}>
-          {(['30', '90', '180'] as const).map(r => (
-            <button key={r} onClick={() => setRange(r)} style={{
-              flex: 1, padding: '6px 0', borderRadius: 'var(--r-sm)',
-              border: `1px solid ${range === r ? 'var(--hl-teal)' : 'var(--glass-border)'}`,
-              background: range === r ? 'var(--hl-teal-dim)' : 'transparent',
-              color: range === r ? 'var(--hl-teal)' : 'var(--text-secondary)',
-              cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            }}>{r}d</button>
+          {[7, 30, 90, 180].map(d => (
+            <button key={d} onClick={() => setDays(d)} style={{
+              flex: 1, padding: '5px 0', borderRadius: 'var(--r-sm)',
+              border: `1px solid ${days === d ? 'var(--hl-teal)' : 'var(--glass-border)'}`,
+              background: days === d ? 'var(--hl-teal-dim)' : 'transparent',
+              color: days === d ? 'var(--hl-teal)' : 'var(--text-muted)',
+              cursor: 'pointer', fontSize: 11, fontWeight: 600,
+              transition: 'all var(--t-fast)',
+            }}>{d}d</button>
           ))}
         </div>
       </div>
-      {paramRows.map(({ label, key, scale = 1, step, min, max, unit }) => {
-        const raw = strategy[key] as number;
-        const displayVal = scale !== 1 ? (raw * scale) : raw;
+
+      {/* Strategy params — slider + inline number input */}
+      {paramRows.map(({ label, key, scale = 1, unit, sliderMin, sliderMax, sliderStep, inputMin, inputMax, inputStep, decimals = 0 }) => {
+        const raw       = strategy[key] as number;
+        const displayed = scale !== 1 ? raw * scale : raw;
+        const dec       = scale !== 1 ? (decimals || 3) : decimals;
         return (
-          <div key={key} style={{ marginBottom: 'var(--sp-3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</label>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
-                {displayVal.toFixed(scale !== 1 ? 3 : 0)}{unit ?? ''}
-              </span>
+          <div key={key} style={{ marginBottom: 'var(--sp-4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <input
+                  type="number"
+                  min={inputMin} max={inputMax} step={inputStep}
+                  value={parseFloat(displayed.toFixed(dec))}
+                  onChange={e => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v)) updateStrat(key, scale !== 1 ? v / scale : v);
+                  }}
+                  onBlur={e => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v)) {
+                      const clamped = Math.min(inputMax, Math.max(inputMin, v));
+                      updateStrat(key, scale !== 1 ? clamped / scale : clamped);
+                    }
+                    (e.target as HTMLInputElement).style.borderColor = 'var(--glass-border)';
+                  }}
+                  style={niceInputStyle}
+                  onFocus={e => (e.target.style.borderColor = 'var(--hl-teal)')}
+                />
+                {unit && <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{unit}</span>}
+              </div>
             </div>
-            <input type="number" className="input" step={step} min={min} max={max}
-              value={displayVal.toFixed(scale !== 1 ? 3 : 0)}
-              onChange={e => updateStrat(key, e.target.value, scale)}
-              style={{ height: 32, fontSize: 12 }} />
+            <input
+              type="range" min={sliderMin} max={sliderMax} step={sliderStep} value={raw}
+              onChange={e => updateStrat(key, parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--hl-teal)', cursor: 'pointer' }}
+            />
           </div>
         );
       })}
+
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '11px 0', marginTop: 4 }}
         onClick={handleRun} disabled={isRunning}>
         <Play size={14} />
-        {isRunning ? 'Running…' : `Run Backtest (${range}d)`}
+        {isRunning ? 'Running…' : `Run Backtest (${days}d)`}
       </button>
       {error && (
         <div style={{ marginTop: 10, background: 'rgba(255,79,110,0.08)', border: '1px solid rgba(255,79,110,0.25)', borderRadius: 'var(--r-md)', padding: '10px 12px', fontSize: 12 }}>
@@ -279,7 +337,7 @@ const Backtester: React.FC = () => {
           <div className="fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--sp-3)' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>{result.params.symbol} · {range}d</h2>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>{result.params.symbol} · {days}d</h2>
                 <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
                   Entry {(result.params.strategy.entryRateThreshold * 100).toFixed(3)}%/hr · Hold {result.params.strategy.maxHoldHours}h
                 </p>
@@ -344,7 +402,7 @@ const Backtester: React.FC = () => {
             <div className="fade-in">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-3)' }}>
                 <div>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>{result.params.symbol} · {range}d backtest</h2>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>{result.params.symbol} · {days}d backtest</h2>
                   <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                     Entry {(result.params.strategy.entryRateThreshold * 100).toFixed(3)}%/hr · Max hold {result.params.strategy.maxHoldHours}h · Capital {formatUSD(result.params.initialCapital)}
                   </p>

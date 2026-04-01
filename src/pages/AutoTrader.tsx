@@ -7,26 +7,71 @@ import { formatUSD, formatRateRaw, formatDuration } from '../utils/format';
 import { Zap, ZapOff, Trash2, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 
-// ── Slider row — compact, no long hints inline ────────────────────────────────
+// ── Slider + number input row ─────────────────────────────────────────────────
+// Slider for quick drag, number field for precise keyboard entry.
+// They stay perfectly in sync — editing one updates the other.
 const ConfigRow: React.FC<{
-  label: string; value: number; display?: string;
+  label: string;
+  value: number;
+  display?: string;        // formatted label value (e.g. "$1,000", "0.040%/hr")
+  inputDisplay?: number;   // raw number shown in the input (after scale)
+  inputUnit?: string;      // unit appended after the input (e.g. "%/hr", "h", "USDC")
   min: number; max: number; step: number;
+  inputMin?: number; inputMax?: number; inputStep?: number;
+  scale?: number;          // divide input value by this to get store value (e.g. 100 for %)
   onChange: (v: number) => void;
-}> = ({ label, value, display, min, max, step, onChange }) => (
-  <div style={{ marginBottom: 'var(--sp-3)' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-      <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</label>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--hl-teal)', fontWeight: 700 }}>
-        {display ?? value}
-      </span>
+}> = ({ label, value, display, inputDisplay, inputUnit, min, max, step, inputMin, inputMax, inputStep, scale = 1, onChange }) => {
+  const rawInput = inputDisplay !== undefined ? inputDisplay : value * (scale !== 1 ? scale : 1);
+  const iMin = inputMin ?? min * (scale !== 1 ? scale : 1);
+  const iMax = inputMax ?? max * (scale !== 1 ? scale : 1);
+  const iStep = inputStep ?? step * (scale !== 1 ? scale : 1);
+
+  const handleInput = (raw: string) => {
+    const parsed = parseFloat(raw);
+    if (isNaN(parsed)) return;
+    const clamped = Math.min(iMax, Math.max(iMin, parsed));
+    onChange(scale !== 1 ? clamped / scale : clamped);
+  };
+
+  return (
+    <div style={{ marginBottom: 'var(--sp-4)' }}>
+      {/* Label row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</label>
+        {/* Compact number input */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input
+            type="number"
+            min={iMin} max={iMax} step={iStep}
+            value={rawInput}
+            onChange={e => handleInput(e.target.value)}
+            onBlur={e => handleInput(e.target.value)}
+            style={{
+              width: 80, height: 28,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 'var(--r-sm)',
+              color: 'var(--hl-teal)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12, fontWeight: 700,
+              textAlign: 'right',
+              padding: '0 6px',
+              outline: 'none',
+            }}
+            onFocus={e => (e.target.style.borderColor = 'var(--hl-teal)')}
+          />
+          {inputUnit && <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{inputUnit}</span>}
+        </div>
+      </div>
+      {/* Slider */}
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(parseFloat(e.target.value))}
+        style={{ width: '100%', accentColor: 'var(--hl-teal)', cursor: 'pointer' }}
+      />
     </div>
-    <input
-      type="range" min={min} max={max} step={step} value={value}
-      onChange={e => onChange(parseFloat(e.target.value))}
-      style={{ width: '100%', accentColor: 'var(--hl-teal)', height: 4 }}
-    />
-  </div>
-);
+  );
+};
 
 // ── Toggle switch (ON/OFF pill) ───────────────────────────────────────────────
 const ToggleSwitch: React.FC<{ on: boolean; onChange: () => void; label: string; desc: string }> = ({ on, onChange, label, desc }) => (
@@ -217,13 +262,53 @@ const ConfigPanel: React.FC<{
   update: (d: Partial<ReturnType<typeof useAutoTraderStore.getState>['config']>) => void;
 }> = ({ config, update }) => (
   <>
-    <ConfigRow label="Capital per position" value={config.capitalPerPosition} display={formatUSD(config.capitalPerPosition)} min={100} max={50000} step={100} onChange={v => update({ capitalPerPosition: v })} />
-    <ConfigRow label="Max open positions" value={config.maxPositions} min={1} max={5} step={1} onChange={v => update({ maxPositions: v })} />
-    <ConfigRow label="Entry rate threshold" value={config.entryThreshold} display={`${(config.entryThreshold * 100).toFixed(3)}%/hr`} min={0.0001} max={0.005} step={0.0001} onChange={v => update({ entryThreshold: v })} />
-    <ConfigRow label="Exit rate threshold" value={config.exitThreshold} display={`${(config.exitThreshold * 100).toFixed(3)}%/hr`} min={0.00005} max={0.002} step={0.00005} onChange={v => update({ exitThreshold: v })} />
-    <ConfigRow label="Min hours elevated" value={config.minHoursElevated} min={1} max={6} step={1} onChange={v => update({ minHoursElevated: v })} />
-    <ConfigRow label="Max hold time" value={config.maxHoldHours} display={formatDuration(config.maxHoldHours)} min={6} max={168} step={6} onChange={v => update({ maxHoldHours: v })} />
-    <ConfigRow label="Min open interest" value={config.minOI} display={formatUSD(config.minOI)} min={100000} max={10000000} step={100000} onChange={v => update({ minOI: v })} />
+    <ConfigRow
+      label="Capital per position"  inputUnit="USDC"
+      value={config.capitalPerPosition} inputDisplay={config.capitalPerPosition}
+      min={100} max={50000} step={100}
+      onChange={v => update({ capitalPerPosition: v })}
+    />
+    <ConfigRow
+      label="Max open positions"
+      value={config.maxPositions} inputDisplay={config.maxPositions}
+      min={1} max={5} step={1}
+      onChange={v => update({ maxPositions: v })}
+    />
+    <ConfigRow
+      label="Entry rate threshold"  inputUnit="%/hr"  scale={100}
+      value={config.entryThreshold}
+      inputDisplay={parseFloat((config.entryThreshold * 100).toFixed(4))}
+      min={0.0001} max={0.005} step={0.0001}
+      inputMin={0.01} inputMax={0.5} inputStep={0.001}
+      onChange={v => update({ entryThreshold: v })}
+    />
+    <ConfigRow
+      label="Exit rate threshold"   inputUnit="%/hr"  scale={100}
+      value={config.exitThreshold}
+      inputDisplay={parseFloat((config.exitThreshold * 100).toFixed(4))}
+      min={0.00005} max={0.002} step={0.00005}
+      inputMin={0.005} inputMax={0.2} inputStep={0.001}
+      onChange={v => update({ exitThreshold: v })}
+    />
+    <ConfigRow
+      label="Min hours elevated"    inputUnit="hrs"
+      value={config.minHoursElevated} inputDisplay={config.minHoursElevated}
+      min={1} max={6} step={1}
+      onChange={v => update({ minHoursElevated: v })}
+    />
+    <ConfigRow
+      label="Max hold time"         inputUnit="hrs"
+      value={config.maxHoldHours} inputDisplay={config.maxHoldHours}
+      min={6} max={168} step={6}
+      onChange={v => update({ maxHoldHours: v })}
+    />
+    <ConfigRow
+      label="Min open interest"     inputUnit="USDC"
+      value={config.minOI} inputDisplay={config.minOI}
+      min={100000} max={10000000} step={100000}
+      inputStep={100000}
+      onChange={v => update({ minOI: v })}
+    />
     <div style={{ marginTop: 4 }}>
       <ToggleSwitch on={config.rotationEnabled} onChange={() => update({ rotationEnabled: !config.rotationEnabled })} label="Auto-rotate" desc="Move to higher-rate pair when profitable after fees" />
       <ToggleSwitch on={config.regimeGate} onChange={() => update({ regimeGate: !config.regimeGate })} label="Regime gate" desc="Pause new entries when market is COLD" />
