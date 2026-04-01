@@ -101,15 +101,15 @@ export const EntryModal: React.FC<EntryModalProps> = ({ pair, onClose }) => {
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
           background: 'var(--bg-overlay)',
           border: `1px solid ${isReal ? 'rgba(245,197,66,0.35)' : 'var(--glass-border-hl)'}`,
-          borderRadius: 'var(--r-xl)', padding: 'var(--sp-6)',
-          width: 420, maxWidth: '92vw', maxHeight: '90vh', overflowY: 'auto',
+          borderRadius: 'var(--r-xl) var(--r-xl) 0 0', padding: 'var(--sp-5)',
+          width: '100%', maxWidth: 480, maxHeight: '92vh', overflowY: 'auto',
           boxShadow: '0 8px 48px rgba(0,0,0,0.8)',
         }}
       >

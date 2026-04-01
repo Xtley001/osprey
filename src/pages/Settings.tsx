@@ -81,7 +81,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="fade-in" style={{ paddingTop: 'var(--sp-4)', maxWidth: 600 }}>
+    <div className="fade-in" style={{ paddingTop: 'var(--sp-4)', maxWidth: 600, width: '100%' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 'var(--sp-5)' }}>Settings</h1>
 
       {/* Account Mode */}
@@ -89,7 +89,7 @@ const Settings: React.FC = () => {
         <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={15} color="var(--hl-teal)" /> Account Mode
         </p>
-        <div className="grid-2" style={{ marginBottom: 'var(--sp-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 'var(--sp-4)' }}>
           <button onClick={() => setMode('demo')} style={{
             padding: 'var(--sp-4)', borderRadius: 'var(--r-md)', cursor: 'pointer', textAlign: 'left',
             border: `1px solid ${mode === 'demo' ? 'var(--accent-blue)' : 'var(--glass-border)'}`,
@@ -136,7 +136,7 @@ const Settings: React.FC = () => {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--sp-4)' }}>
               <div>
-                <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-yellow)', marginBottom: 4 }}>{wallet.address}</p>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-yellow)', marginBottom: 4, wordBreak: 'break-all' }}>{wallet.address}</p>
                 <p style={{ fontSize: 11, color: 'var(--accent-green)' }}>● Connected to Hyperliquid · {wallet.network}</p>
               </div>
               <button className="btn btn-danger" style={{ padding: '5px 12px', fontSize: 11 }} onClick={disconnect}>
@@ -194,7 +194,7 @@ const Settings: React.FC = () => {
         <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <RefreshCw size={15} color="var(--hl-teal)" /> Demo Account
         </p>
-        <div className="grid-3" style={{ marginBottom: 'var(--sp-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 'var(--sp-4)' }}>
           {[
             { label: 'Balance',         value: formatUSD(demo.balance),        color: 'var(--text-primary)' },
             { label: 'Funding Earned',  value: '+' + formatUSD(demo.fundingEarned), color: 'var(--accent-green)' },
