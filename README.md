@@ -194,8 +194,6 @@ vercel --prod
 |---|---|
 | Spot hedge auto-execution | Manual — HL spot doesn't cover all perp pairs. Use HL spot or a CEX for the long leg |
 | Position persistence | In-browser memory only — closing the tab clears positions. PostgreSQL backend is v2 |
-| Rotation auto-execution | Shows recommendations only — does not auto-trade the rotation |
-| Testnet UI toggle | Not yet in the UI — set `VITE_HL_REST_URL` in `.env.local` to point at testnet |
 | Mobile trading flow | Functional but optimised for desktop |
 
 ---
