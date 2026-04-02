@@ -35,16 +35,11 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
   toggle: () => {
     const { config } = get();
     const appMode = useAppStore.getState().mode;
-
-    // Capture intended state BEFORE mutating store
     const willEnable = !config.enabled;
-
-    // Safety: auto-trader mode must match app mode
     if (willEnable && config.mode !== appMode) {
       set(s => ({ config: { ...s.config, mode: appMode } }));
     }
     set(s => ({ config: { ...s.config, enabled: !s.config.enabled } }));
-
     if (willEnable) {
       toast.success(`Auto-trader enabled (${appMode} mode)`);
     } else {
@@ -67,15 +62,14 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
       const { regime, nextPrevAvg } = detectRegime(pairs, appState.prevRegimeAvg);
       appState.setPrevRegimeAvg(nextPrevAvg);
       appState.setRegime(regime);
-      const mode      = appState.mode;
-      const wallet    = appState.wallet;
+      const mode   = appState.mode;
+      const wallet = appState.wallet;
 
       if (pairs.length === 0) {
         set({ running: false });
         return;
       }
 
-      // Fetch recent funding history for top candidates (for signal confirmation)
       const topCandidates = [...pairs]
         .filter(p => p.currentRate >= config.entryThreshold * 0.8)
         .sort((a, b) => b.currentRate - a.currentRate)
@@ -90,40 +84,44 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
         })
       );
 
-      // Run the decision engine
       const { actions, logLines } = runAutoTraderCycle(pairs, positions, regime, config);
 
-      // Append log entries
       const newEntries: AutoTraderLogEntry[] = logLines.map(l => ({ ...l, id: _logId++ }));
       set(s => ({
-        log: [...newEntries, ...s.log].slice(0, 200), // keep last 200 entries
+        log: [...newEntries, ...s.log].slice(0, 200),
         nextRunAt: Date.now() + 60_000,
       }));
 
-      // Execute actions
       for (const action of actions) {
+        // ── EXIT ────────────────────────────────────────────────────────────
         if (action.type === 'EXIT') {
           usePositionStore.getState().closePosition(action.positionId);
           const pos = positions.find(p => p.id === action.positionId);
           if (pos) {
-            const net = pos.fundingEarned - pos.feesPaid;
+            // Charge exit (taker) fee at close — not pre-charged at entry
+            const exitFee = pos.notional * DEFAULT_STRATEGY.takerFee;
+            const totalFees = pos.feesPaid + exitFee;
+            const net = pos.fundingEarned - totalFees;
             set(s => ({
               totalAutoEarned: s.totalAutoEarned + pos.fundingEarned,
-              totalAutoFees:   s.totalAutoFees   + pos.feesPaid,
+              totalAutoFees:   s.totalAutoFees   + totalFees,
             }));
             toast.info(`Auto-exit ${action.symbol} · Net $${net.toFixed(2)}`);
           }
         }
 
+        // ── ENTER ───────────────────────────────────────────────────────────
         if (action.type === 'ENTER') {
           const pair = pairs.find(p => p.symbol === action.symbol);
           if (!pair) continue;
 
           const notional = config.capitalPerPosition / 2;
-          const entryFees = notional * DEFAULT_STRATEGY.takerFee * 2;
+
+          // Entry fee uses maker rate (Alo post-only order, default tif).
+          // Exit fee (taker) is charged at close, not pre-loaded here.
+          const entryFees = notional * DEFAULT_STRATEGY.makerFee;
 
           if (mode === 'real') {
-            // Real order: submit to HL
             if (!wallet.connected || !wallet.address) {
               toast.error('Auto-trader: wallet not connected — cannot enter real positions');
               set(s => ({
@@ -141,12 +139,31 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
               toast.error(`Auto-trader: no valid price for ${action.symbol} — skipping`);
               continue;
             }
+
             const coinSz  = parseFloat((notional / pair.price).toFixed(4));
-            const worstPx = pair.price * 0.99;
-            const result  = await placeMarketOrder({
-              coin: action.symbol, isBuy: false, sz: coinSz, px: worstPx,
+            // Funding-arb entries are always short perp (isBuy: false).
+            // This rests on the book and fills as maker (0.010% fee).
+            // If rejected as "would cross", retry as taker (Ioc) automatically.
+            const makerPx = pair.price * 0.9995;
+
+            let result = await placeMarketOrder({
+              coin: action.symbol, isBuy: false,
+              sz: coinSz, px: makerPx,
               address: wallet.address, provider: eth,
+              tif: 'Alo',   // post-only maker — 0.010% fee
             });
+
+            // Fallback: if Alo was rejected (would cross book), fall back to Ioc
+            if (!result.success && result.error?.includes('Would immediately cross')) {
+              toast.info(`${action.symbol}: Alo rejected, retrying as Ioc`);
+              result = await placeMarketOrder({
+                coin: action.symbol, isBuy: false,
+                sz: coinSz, px: pair.price * 0.99,
+                address: wallet.address, provider: eth,
+                tif: 'Ioc',   // taker fallback
+              });
+            }
+
             if (!result.success) {
               toast.error(`Auto-trader order failed: ${result.error}`);
               set(s => ({
@@ -154,12 +171,13 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
               }));
               continue;
             }
-            toast.success(`Auto-trade entered ${action.symbol} · Order ${result.orderId ?? 'confirmed'}`);
+
+            const feeType = result.filledAsMaker ? 'maker (0.010%)' : 'taker (0.035%)';
+            toast.success(`Auto-trade entered ${action.symbol} · Order ${result.orderId ?? 'confirmed'} · ${feeType}`);
           } else {
             toast.success(`Auto-trade (demo) entered ${action.symbol} · ${(action.rate * 100).toFixed(4)}%/hr`);
           }
 
-          // Track in position store
           usePositionStore.getState().openPosition({
             symbol:        action.symbol,
             entryTime:     Date.now(),
@@ -167,7 +185,7 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
             entryRate:     pair.currentRate,
             notional,
             fundingEarned: 0,
-            feesPaid:      entryFees,
+            feesPaid:      entryFees,   // maker entry fee only; exit fee added on close
             currentPrice:  pair.price,
             currentRate:   pair.currentRate,
             hedgeDrift:    0,
@@ -176,14 +194,24 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
           });
         }
 
+        // ── ROTATE ──────────────────────────────────────────────────────────
         if (action.type === 'ROTATE') {
-          // Close current, enter new
           usePositionStore.getState().closePosition(action.positionId);
+          const oldPos = positions.find(p => p.id === action.positionId);
+          if (oldPos) {
+            // Charge exit (taker) fee on the closing leg
+            const exitFee  = oldPos.notional * DEFAULT_STRATEGY.takerFee;
+            const totalFees = oldPos.feesPaid + exitFee;
+            set(s => ({
+              totalAutoFees: s.totalAutoFees + totalFees,
+            }));
+          }
+
           const newPair = pairs.find(p => p.symbol === action.toSymbol);
           if (!newPair) continue;
 
           const notional  = config.capitalPerPosition / 2;
-          const entryFees = notional * DEFAULT_STRATEGY.takerFee * 2;
+          const entryFees = notional * DEFAULT_STRATEGY.makerFee;   // maker entry
 
           if (mode === 'real') {
             const eth = (window as Window & { ethereum?: unknown }).ethereum;
@@ -193,11 +221,22 @@ export const useAutoTraderStore = create<AutoTraderStore>((set, get) => ({
               continue;
             }
             const coinSz  = parseFloat((notional / newPair.price).toFixed(4));
-            const worstPx = newPair.price * 0.99;
-            const result  = await placeMarketOrder({
-              coin: action.toSymbol, isBuy: false, sz: coinSz, px: worstPx,
+            const makerPx = newPair.price * 0.9995;
+
+            let result = await placeMarketOrder({
+              coin: action.toSymbol, isBuy: false, sz: coinSz, px: makerPx,
               address: wallet.address, provider: eth,
+              tif: 'Alo',
             });
+
+            if (!result.success && result.error?.includes('Would immediately cross')) {
+              result = await placeMarketOrder({
+                coin: action.toSymbol, isBuy: false, sz: coinSz, px: newPair.price * 0.99,
+                address: wallet.address, provider: eth,
+                tif: 'Ioc',
+              });
+            }
+
             if (!result.success) {
               toast.error(`Auto-rotate failed: ${result.error}`);
               continue;

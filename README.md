@@ -53,13 +53,78 @@ Fully automated execution is on the roadmap (v2: Telegram alerts, v3: semi-autom
 - Real balance fetch from HL's `clearinghouseState` API after connect
 - Order submission to HL `/exchange` with correct EIP-712-variant signing
 - Correct asset index lookup from HL's universe (not hardcoded)
-- IOC (immediate-or-cancel) order type — market-like execution
+- **Post-only (Alo) order type by default** — maker fee (0.010%) instead of taker (0.035%)
+- Automatic Alo → Ioc fallback if the post-only order would cross the book
 
 **Requires manual step:**
 - Spot hedge leg — HL's spot market doesn't cover all perp pairs. Execute on HL spot or a CEX.
 
 **Label:**
 - Live trading is marked **Beta** in the UI — test on HL testnet before using real capital.
+
+---
+
+## Fee model (v18)
+
+Osprey now uses the minimum-fee order routing strategy on Hyperliquid:
+
+| Leg | Order type | HL TIF | Fee rate | Per $5k notional |
+|-----|-----------|--------|----------|-----------------|
+| Entry | Post-only limit | `Alo` | **0.010%** (maker) | $0.50 |
+| Exit | Immediate-or-cancel | `Ioc` | 0.035% (taker) | $1.75 |
+| Rebalance | Immediate-or-cancel | `Ioc` | 0.035% × drift notional | variable |
+
+**Round-trip saving vs. previous (both legs taker):**
+
+```
+Before (v17): $1.75 + $1.75 = $3.50 per round-trip on $5k
+After  (v18): $0.50 + $1.75 = $2.25 per round-trip on $5k  → −36%
+```
+
+If both legs can be maker (e.g. patient exit via GTC limit):
+
+```
+Best case:    $0.50 + $0.50 = $1.00 per round-trip on $5k  → −71%
+```
+
+### How it works
+
+`placeMarketOrder()` in `src/api/hyperliquid.ts` accepts an optional `tif` parameter:
+
+```ts
+// Default: post-only maker (0.010% fee)
+await placeMarketOrder({ coin, isBuy, sz, px, address, provider });
+
+// Explicit taker for urgent exits (0.035% fee)
+await placeMarketOrder({ coin, isBuy, sz, px, address, provider, tif: 'Ioc' });
+```
+
+The auto-trader automatically falls back from `Alo` to `Ioc` when the post-only order
+would immediately cross (e.g. during a fast market move), so fills are never missed.
+
+### Fee tiers (volume-based)
+
+Higher volume reduces the taker leg further:
+
+| 30d Volume | Maker | Taker |
+|-----------|-------|-------|
+| Default   | 0.010% | 0.035% |
+| ≥ $5M     | 0.008% | 0.030% |
+| ≥ $25M    | 0.005% | 0.025% |
+| ≥ $100M   | 0.002% | 0.020% |
+
+Update `DEFAULT_STRATEGY.takerFee` and `DEFAULT_STRATEGY.makerFee` in
+`src/utils/constants.ts` when your account reaches a higher tier. The backtester
+and all fee previews will update automatically.
+
+### Backtester fee accuracy
+
+The backtester (v18) correctly models:
+- **Entry fee** = `capitalUSDC × makerFee` (Alo post-only)
+- **Exit fee** = `capitalUSDC × takerFee` (Ioc taker)
+- **Rebalance fee** = `driftNotional × takerFee` (based on actual drift %, not a fixed heuristic)
+
+Previously all legs used `takerFee`, making backtest P&L 36% more pessimistic than reality.
 
 ---
 
@@ -100,13 +165,6 @@ Osprey is fully responsive:
 
 Install as a PWA from Chrome — click the install icon in the address bar. Runs as a standalone
 app, no tab required.
-
----
-
-## Fee accuracy
-
-The 0.035% taker fee shown throughout the app is Hyperliquid's actual current fee.
-Break-even calculations use this real rate.
 
 ---
 
@@ -170,6 +228,8 @@ See [SETUP.md](./SETUP.md) · [TESTING.md](./TESTING.md)
 - [ ] Spot hedge instructions per pair (which exchange, which instrument)
 - [ ] Semi-automated rotation (Telegram approval flow)
 - [ ] Mobile-optimised entry flow
+- [ ] GTC limit exit orders for full maker round-trips (−71% fee vs v17 baseline)
+- [ ] Per-account fee tier config (auto-detect from HL user state API)
 
 ---
 

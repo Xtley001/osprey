@@ -256,8 +256,14 @@ describe('runBacktest — fee math correctness (regression for double-count fix)
   it('fees for a single trade equal exactly entryFee + exitFee with no rebalance', () => {
     // Use a rate that always stays above exitThreshold so we get exactly one
     // trade that exits only due to maxHoldHours, with a flat price (no rebalance).
-    const capital = 5_000;
-    const takerFee = 0.00035;
+    //
+    // v18 fee model: entry uses makerFee (Alo post-only), exit uses takerFee (Ioc).
+    //   entryFee = capital * makerFee = 5000 * 0.0001  = $0.50
+    //   exitFee  = capital * takerFee = 5000 * 0.00035 = $1.75
+    //   total                                           = $2.25  (was $3.50 in v17)
+    const capital   = 5_000;
+    const takerFee  = 0.00035;
+    const makerFee  = 0.0001;
     const maxHoldHours = 4;
 
     const params = makeParams({
@@ -269,7 +275,7 @@ describe('runBacktest — fee math correctness (regression for double-count fix)
         capitalUSDC: capital,
         rebalanceThreshold: 999,    // disable rebalance
         takerFee,
-        makerFee: 0.0001,
+        makerFee,
       },
     });
 
@@ -286,10 +292,11 @@ describe('runBacktest — fee math correctness (regression for double-count fix)
     const result = runBacktest(params, funding, candles);
     expect(result.trades.length).toBeGreaterThan(0);
 
-    const expectedFees = capital * takerFee * 2; // entry + exit, exactly once each
+    // v18: entry = makerFee, exit = takerFee (not both taker as in v17)
+    const expectedFees = capital * makerFee + capital * takerFee; // $0.50 + $1.75 = $2.25
     const trade = result.trades[0];
 
-    // fees should be entryFee + exitFee = capital * takerFee * 2
+    // fees should be entryFee (maker) + exitFee (taker), charged exactly once each
     expect(trade.fees).toBeCloseTo(expectedFees, 6);
 
     // net = gross - fees (no double-charging)

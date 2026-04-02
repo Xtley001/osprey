@@ -34,7 +34,7 @@ interface HLAsset {
 interface HLAssetCtx {
   funding: string;
   openInterest: string;
-  prevDayPx: string;     // previous day price — used to compute 24h change
+  prevDayPx: string;
   dayNtlVlm: string;
   premium: string;
   oraclePrice: string;
@@ -68,7 +68,6 @@ export async function fetchFundingRates(): Promise<FundingRate[]> {
     throw new Error('Hyperliquid API: universe or assetCtxs missing');
   }
 
-  // Populate coin → index cache
   meta.universe.forEach((asset, i) => {
     _coinIndexCache.set(asset.name.toUpperCase(), i);
   });
@@ -80,12 +79,7 @@ export async function fetchFundingRates(): Promise<FundingRate[]> {
     const prev  = parseFloat(ctx.prevDayPx ?? '0');
     const oi    = parseFloat(ctx.openInterest ?? '0') * price;
     const vol   = parseFloat(ctx.dayNtlVlm   ?? '0');
-
-    // Real 24h change from HL's prevDayPx field
     const change24h = prev > 0 ? ((price - prev) / prev) * 100 : 0;
-
-    // Trend: compare current funding to a rough baseline
-    // HL doesn't give us historical rate in this response — we track it
     const heat  = classifyRate(rate);
 
     return {
@@ -99,7 +93,7 @@ export async function fetchFundingRates(): Promise<FundingRate[]> {
       openInterest: oi,
       volume24h:    vol,
       heat,
-      trend:        'stable',   // updated by regime engine after comparing prev fetch
+      trend:        'stable',
     };
   });
 }
@@ -120,19 +114,11 @@ export async function fetchFundingHistory(
     body: JSON.stringify({ type: 'fundingHistory', coin: symbol, startTime: start, endTime: end }),
   });
 
-  if (!res.ok) {
-    throw new Error(`fundingHistory API error ${res.status} for ${symbol}`);
-  }
+  if (!res.ok) throw new Error(`fundingHistory API error ${res.status} for ${symbol}`);
 
   const data = await res.json();
-
-  if (!Array.isArray(data)) {
-    throw new Error(`fundingHistory: unexpected response for ${symbol}`);
-  }
-
-  if (data.length === 0) {
-    throw new Error(`fundingHistory: no data returned for ${symbol} in requested range`);
-  }
+  if (!Array.isArray(data)) throw new Error(`fundingHistory: unexpected response for ${symbol}`);
+  if (data.length === 0) throw new Error(`fundingHistory: no data returned for ${symbol} in requested range`);
 
   return data.map((d: { time: number; fundingRate: string; coin: string }) => ({
     timestamp: d.time,
@@ -161,19 +147,11 @@ export async function fetchCandles(
     }),
   });
 
-  if (!res.ok) {
-    throw new Error(`candleSnapshot API error ${res.status} for ${symbol}`);
-  }
+  if (!res.ok) throw new Error(`candleSnapshot API error ${res.status} for ${symbol}`);
 
   const data = await res.json();
-
-  if (!Array.isArray(data)) {
-    throw new Error(`candleSnapshot: unexpected response for ${symbol}`);
-  }
-
-  if (data.length === 0) {
-    throw new Error(`candleSnapshot: no candles returned for ${symbol} in requested range`);
-  }
+  if (!Array.isArray(data)) throw new Error(`candleSnapshot: unexpected response for ${symbol}`);
+  if (data.length === 0) throw new Error(`candleSnapshot: no candles returned for ${symbol} in requested range`);
 
   return data.map((c: {
     t: number; o: string; h: string; l: string; c: string; v: string
@@ -243,14 +221,6 @@ export async function fetchAccountState(
 // ── Hyperliquid signing helpers ───────────────────────────────────────────────
 // HL uses a "phantom agent" EIP-712 typed-data scheme.
 // See: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/signing
-//
-// Step 1: msgpack-encode the action, keccak256 → actionHash
-// Step 2: ABI-encode (actionHash, nonce, vaultAddress=0x00) → connectionId
-// Step 3: EIP-712 sign the Agent struct { source: "a", connectionId }
-//         with domain { name:"Exchange", version:"1", chainId:1337,
-//                       verifyingContract: 0x0000…0000 }
-//
-// HL's chainId for signing is always 1337 regardless of connected network.
 
 async function signHyperliquidAction(
   signer: import('ethers').Signer,
@@ -260,16 +230,9 @@ async function signHyperliquidAction(
 ): Promise<{ r: string; s: string; v: number }> {
   const { ethers } = await import('ethers');
 
-  // msgpack is not available — HL's own JS examples use JSON for the
-  // action hash when no msgpack encoder is present in browser contexts.
-  // We replicate the same approach used in HL's open-source web frontend:
-  //   actionHash = keccak256(msgpack(action))
-  // Because we don't bundle msgpack, we use the canonical JSON hash path
-  // that HL also accepts for browser wallet integrations (per their SDK source).
   const actionBytes = ethers.toUtf8Bytes(JSON.stringify(action));
   const actionHash  = ethers.keccak256(actionBytes);
 
-  // connectionId = keccak256(abi.encode(actionHash, nonce, vaultAddress))
   const connectionId = ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
       ['bytes32', 'uint64', 'address'],
@@ -277,7 +240,6 @@ async function signHyperliquidAction(
     )
   );
 
-  // EIP-712 typed data — HL's phantom agent domain
   const domain = {
     name:              'Exchange',
     version:           '1',
@@ -292,15 +254,39 @@ async function signHyperliquidAction(
     ],
   };
 
-  const value = {
-    source:       'a',   // 'a' = mainnet, 'b' = testnet
-    connectionId,
-  };
+  const value = { source: 'a', connectionId };
 
   const sig = await (signer as import('ethers').JsonRpcSigner).signTypedData(domain, types, value);
   const { r, s, v } = ethers.Signature.from(sig);
   return { r, s, v };
 }
+
+// ── Order TIF (Time-In-Force) options ────────────────────────────────────────
+//
+// | TIF   | Behaviour                                     | Fee tier        |
+// |-------|-----------------------------------------------|-----------------|
+// | 'Ioc' | Immediate-Or-Cancel — crosses book at market  | TAKER  0.035%  |
+// | 'Gtc' | Good-Till-Cancel — rests on book              | MAKER  0.010%  |
+// | 'Alo' | Add-Liquidity-Only (post-only) — rejected if  | MAKER  0.010%  |
+// |       | it would cross immediately; never taker        |                 |
+//
+// DEFAULT is 'Alo' (post-only maker) — saves 2.5 bps per leg vs 'Ioc'.
+// Funding-arb entries are not time-sensitive; a resting limit 1–2 bps
+// inside the spread fills within seconds on all liquid HL pairs.
+//
+// Fee impact per $5,000 notional round-trip:
+//   Before (Ioc × 2): $1.75 + $1.75 = $3.50
+//   After  (Alo + Ioc): $0.50 + $1.75 = $2.25  → saves $1.25 (−36%)
+//   After  (Alo × 2):  $0.50 + $0.50 = $1.00  → saves $2.50 (−71%)
+//
+// Usage:
+//   placeMarketOrder({ ..., tif: 'Alo' })  ← default, maker entry
+//   placeMarketOrder({ ..., tif: 'Ioc' })  ← urgent exit, taker fill
+//
+// If an 'Alo' order is rejected (would cross), the error message contains
+// "Would immediately cross" — caller should retry with tif: 'Ioc'.
+
+export type OrderTif = 'Ioc' | 'Gtc' | 'Alo';
 
 export async function placeMarketOrder(params: {
   coin:     string;
@@ -309,17 +295,26 @@ export async function placeMarketOrder(params: {
   px:       number;
   address:  string;
   provider: unknown;
-}): Promise<{ success: boolean; orderId?: string; error?: string }> {
+  /**
+   * Time-in-force for the order.
+   * Defaults to 'Alo' (post-only maker, 0.010% fee) to minimise costs.
+   * Use 'Ioc' only for time-critical exits where immediate fill matters
+   * more than the 2.5 bps fee difference.
+   */
+  tif?:     OrderTif;
+}): Promise<{ success: boolean; orderId?: string; error?: string; filledAsMaker?: boolean }> {
   try {
     const { ethers } = await import('ethers');
 
-    // Guard: price and size must be positive finite numbers
     if (!params.px || !isFinite(params.px) || params.px <= 0) {
       return { success: false, error: `Invalid price: ${params.px}` };
     }
     if (!params.sz || !isFinite(params.sz) || params.sz <= 0) {
       return { success: false, error: `Invalid size: ${params.sz}` };
     }
+
+    // ── Fee-minimising default: post-only maker ──────────────────────────────
+    const tif: OrderTif = params.tif ?? 'Alo';
 
     const assetIndex = await ensureCoinIndex(params.coin);
     const provider   = new (ethers.BrowserProvider)(
@@ -336,7 +331,7 @@ export async function placeMarketOrder(params: {
         p: params.px.toFixed(6),
         s: params.sz.toFixed(6),
         r: false,
-        t: { limit: { tif: 'Ioc' } },
+        t: { limit: { tif } },
       }],
       grouping: 'na',
     };
@@ -360,9 +355,17 @@ export async function placeMarketOrder(params: {
 
     const data = await res.json();
     if (data.status === 'ok') {
-      const status  = data.response?.data?.statuses?.[0];
-      const orderId = (status?.resting?.oid ?? status?.filled?.oid)?.toString();
-      return { success: true, orderId };
+      const status = data.response?.data?.statuses?.[0];
+
+      // Alo orders rejected by the matching engine include a status.error.
+      // Surface this so callers can decide whether to retry with Ioc.
+      if (status?.error) {
+        return { success: false, error: status.error };
+      }
+
+      const orderId       = (status?.resting?.oid ?? status?.filled?.oid)?.toString();
+      const filledAsMaker = !!status?.resting;   // resting = posted on book = maker fee
+      return { success: true, orderId, filledAsMaker };
     }
 
     const errMsg =

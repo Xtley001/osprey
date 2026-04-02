@@ -4,7 +4,6 @@ import type { FundingEvent, Candle } from '../types/funding';
 let tradeIdCounter = 1;
 
 function getRateAtHour(history: FundingEvent[], ts: number): number {
-  // Find the nearest funding event before or at ts
   let best: FundingEvent | null = null;
   for (const ev of history) {
     if (ev.timestamp <= ts) {
@@ -67,13 +66,11 @@ function computeMetrics(
   const bestTrade = Math.max(...nets);
   const worstTrade = Math.min(...nets);
 
-  // Sharpe (simplified)
   const returns = trades.map(t => t.net / initialCapital);
   const mean = returns.reduce((s, r) => s + r, 0) / returns.length;
   const variance = returns.reduce((s, r) => s + (r - mean) ** 2, 0) / returns.length;
   const sharpeRatio = variance > 0 ? (mean / Math.sqrt(variance)) * Math.sqrt(8760 / avgHoldHours) : 0;
 
-  // Max drawdown
   let peak = initialCapital;
   let maxDrawdown = 0;
   for (const pt of curve) {
@@ -115,15 +112,26 @@ export function runBacktest(
   const trades: TradeRecord[] = [];
   const equityCurve: { timestamp: number; equity: number }[] = [];
 
-  // Fee model:
-  //   entryFee  — paid once when opening
-  //   exitFee   — paid once when closing
-  //   amortize ONLY the round-trip (entry+exit) across maxHoldHours for the
-  //   equity curve; the trade record gets the exact fees actually paid.
-  const entryFee  = strategy.capitalUSDC * strategy.takerFee;
-  const exitFee   = strategy.capitalUSDC * strategy.takerFee;
+  // ── Fee model (v18 — maker entry, taker exit) ──────────────────────────────
+  //
+  // Entry orders use 'Alo' (post-only maker) by default → makerFee (0.010%).
+  // Exit orders use 'Ioc' (immediate-or-cancel taker)  → takerFee (0.035%).
+  //
+  // This reflects the real order routing in hyperliquid.ts where placeMarketOrder
+  // defaults tif to 'Alo' for entries and callers can pass 'Ioc' for exits.
+  //
+  // Round-trip cost per $5,000 notional:
+  //   Old (both taker): $1.75 + $1.75 = $3.50
+  //   New (maker+taker): $0.50 + $1.75 = $2.25  → −36%
+  //
+  // Rebalance fee uses actual drift notional rather than a fixed 10% heuristic.
+
+  const entryFee  = strategy.capitalUSDC * strategy.makerFee;   // Alo = maker
+  const exitFee   = strategy.capitalUSDC * strategy.takerFee;   // Ioc = taker
   const roundTrip = entryFee + exitFee;
-  // Per-hour equity drag for the curve (informational, not charged to trade record)
+
+  // Amortize round-trip across maxHoldHours for the equity curve display
+  // (conservative drag; exact fees are captured per trade record)
   const amortizedFeePerHour = roundTrip / Math.max(strategy.maxHoldHours, 1);
 
   for (let ts = start; ts <= end; ts += hourMs) {
@@ -140,38 +148,38 @@ export function runBacktest(
         entryPrice = price;
         entryRate = rate;
         tradeGross = 0;
-        tradeFees = entryFee;   // entry fee charged on open
+        tradeFees = entryFee;   // maker entry fee charged on open
         hoursHeld = 0;
         tradeSymbol = params.symbol;
       }
     } else {
       hoursHeld++;
 
-      // Accumulate funding
       const grossHour = (strategy.capitalUSDC / 2) * rate;
       tradeGross += grossHour;
 
-      // Equity curve uses amortized round-trip drag (conservative, not exact)
+      // Equity curve: amortized round-trip drag
       equity = equity + grossHour - amortizedFeePerHour;
 
-      // Rebalance check — extra taker fee when delta drifts
+      // Rebalance — fee on actual drift notional, not a fixed heuristic
       if (price > 0 && entryPrice > 0) {
         const drift = Math.abs((price - entryPrice) / entryPrice) * 100;
         if (drift > strategy.rebalanceThreshold) {
-          const rebalFee = strategy.capitalUSDC * strategy.takerFee * 0.1;
+          // Drift notional = fraction of capital that needs to be re-hedged
+          const driftNotional = strategy.capitalUSDC * (drift / 100);
+          const rebalFee = driftNotional * strategy.takerFee;   // rebalance is always taker
           tradeFees += rebalFee;
           equity    -= rebalFee;
           entryPrice = price;
         }
       }
 
-      // Exit check
       const shouldExit =
         rate < strategy.exitRateThreshold ||
         hoursHeld >= strategy.maxHoldHours;
 
       if (shouldExit) {
-        // Charge exit fee exactly once
+        // Taker exit fee charged exactly once on close
         tradeFees += exitFee;
         const net = tradeGross - tradeFees;
         trades.push({
