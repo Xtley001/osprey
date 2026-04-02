@@ -3,14 +3,44 @@ import type { FundingRate, FundingEvent, Candle } from '../types/funding';
 import { classifyRate } from '../utils/rateColor';
 import { classifyPairCategory } from '../utils/constants';
 
-// ── Coin → asset index cache ─────────────────────────────────────────────────
+// ── Coin → asset index + szDecimals cache ────────────────────────────────────
 // HL requires a numeric asset index in every order, not a symbol string.
-// Populated on the first fetchFundingRates() call and reused.
-const _coinIndexCache: Map<string, number> = new Map();
+// szDecimals is per-asset and controls how many decimal places are valid for
+// the size field — using more decimals than szDecimals causes order rejection.
+// Both caches are populated on the first fetchFundingRates() call and reused.
+const _coinIndexCache:     Map<string, number> = new Map();
+const _coinSzDecimals:     Map<string, number> = new Map();
 
 export function getCoinIndex(coin: string): number | null {
   const idx = _coinIndexCache.get(coin.toUpperCase());
   return idx !== undefined ? idx : null;
+}
+
+/** Returns the number of decimal places HL accepts for this coin's size field. */
+function getCoinSzDecimals(coin: string): number {
+  return _coinSzDecimals.get(coin.toUpperCase()) ?? 4; // safe fallback
+}
+
+/**
+ * Format a number to exactly szDecimals decimal places, then strip
+ * trailing zeros so HL's matching engine sees a clean number string.
+ * e.g. formatSz(0.001000, 4) → "0.001"
+ *      formatSz(1.5,     0) → "2"  (rounds to integer for 0-decimal assets)
+ */
+function formatSz(value: number, szDecimals: number): string {
+  return value.toFixed(szDecimals).replace(/\.?0+$/, '') || '0';
+}
+
+/**
+ * Format a price string. HL accepts up to 6 significant figures for price
+ * (not decimal places — significant figures). We use toPrecision(6) and strip
+ * trailing zeros, which matches what the HL SDK does internally.
+ */
+function formatPx(value: number): string {
+  // Use 6 significant figures (HL's internal limit), not 6 decimal places.
+  // toFixed(6) breaks for large prices like BTC: "67234.123456" has 11 sig figs.
+  const s = parseFloat(value.toPrecision(6)).toString();
+  return s;
 }
 
 async function ensureCoinIndex(coin: string): Promise<number> {
@@ -70,6 +100,7 @@ export async function fetchFundingRates(): Promise<FundingRate[]> {
 
   meta.universe.forEach((asset, i) => {
     _coinIndexCache.set(asset.name.toUpperCase(), i);
+    _coinSzDecimals.set(asset.name.toUpperCase(), asset.szDecimals);
   });
 
   return meta.universe.map((asset, i): FundingRate => {
@@ -317,19 +348,23 @@ export async function placeMarketOrder(params: {
     const tif: OrderTif = params.tif ?? 'Alo';
 
     const assetIndex = await ensureCoinIndex(params.coin);
+    const szDecimals  = getCoinSzDecimals(params.coin);
     const provider   = new (ethers.BrowserProvider)(
       params.provider as ConstructorParameters<typeof ethers.BrowserProvider>[0]
     );
     const signer = await provider.getSigner();
     const nonce  = Date.now();
 
+    // Use per-asset szDecimals for size (from HL universe metadata).
+    // Use 6 significant figures for price (HL's internal limit).
+    // Both helpers strip trailing zeros to match HL's canonical format.
     const action = {
       type: 'order',
       orders: [{
         a: assetIndex,
         b: params.isBuy,
-        p: params.px.toFixed(6),
-        s: params.sz.toFixed(6),
+        p: formatPx(params.px),
+        s: formatSz(params.sz, szDecimals),
         r: false,
         t: { limit: { tif } },
       }],

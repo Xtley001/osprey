@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Osprey Docs — Funding Rate Intelligence for Hyperliquid</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0c0e10;
+      --surface:   #111417;
+      --border:    #1e2329;
+      --border-hi: #2a3240;
+      --teal:      #00d4aa;
+      --teal-dim:  #00d4aa33;
+      --teal-mid:  #00d4aa66;
+      --amber:     #f59e0b;
+      --red:       #ef4444;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --code-bg:   #0a0d10;
+      --sidebar-w: 260px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── Scanline overlay ─────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* ── Top bar ─────────────────────────────────────── */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      background: rgba(12,14,16,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      z-index: 100;
+    }
+
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .topbar-logo svg {
+      width: 28px; height: 28px;
+      filter: drop-shadow(0 0 6px var(--teal));
+    }
+
+    .topbar-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 17px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .topbar-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--teal);
+      background: var(--teal-dim);
+      border: 1px solid var(--teal-mid);
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.08em;
+    }
+
+    .topbar-links {
+      margin-left: auto;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .topbar-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .topbar-links a:hover { color: var(--teal); }
+
+    .topbar-cta {
+      font-size: 12px !important;
+      color: var(--teal) !important;
+      border: 1px solid var(--teal-mid);
+      padding: 5px 14px;
+      border-radius: 4px;
+      transition: background 0.15s !important;
+    }
+
+    .topbar-cta:hover { background: var(--teal-dim) !important; }
+
+    /* ── Layout ──────────────────────────────────────── */
+    .layout {
+      display: flex;
+      padding-top: 52px;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      position: fixed;
+      top: 52px;
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      background: var(--surface);
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+    .sidebar-section {
+      margin-bottom: 28px;
+      padding: 0 20px;
+    }
+
+    .sidebar-heading {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-link {
+      display: block;
+      font-size: 13.5px;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 5px 10px;
+      margin: 1px 0;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      transition: all 0.12s;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .sidebar-link:hover, .sidebar-link.active {
+      color: var(--teal);
+      background: var(--teal-dim);
+      border-left-color: var(--teal);
+    }
+
+    .sidebar-link .badge {
+      float: right;
+      font-size: 9px;
+      font-family: 'IBM Plex Mono', monospace;
+      background: #ef444420;
+      color: #ef4444;
+      border: 1px solid #ef444440;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-top: 2px;
+    }
+
+    .sidebar-link .badge.ok {
+      background: #22c55e20;
+      color: #22c55e;
+      border-color: #22c55e40;
+    }
+
+    /* ── Main content ────────────────────────────────── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      max-width: 820px;
+      padding: 56px 64px 120px;
+    }
+
+    /* ── Section anchors ─────────────────────────────── */
+    .section {
+      margin-bottom: 72px;
+      scroll-margin-top: 72px;
+    }
+
+    /* ── Typography ──────────────────────────────────── */
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-label::after {
+      content: '';
+      display: block;
+      height: 1px;
+      width: 48px;
+      background: var(--teal-mid);
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 42px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      color: #f1f5f9;
+    }
+
+    h1 span { color: var(--teal); }
+
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+      color: #f1f5f9;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .icon { font-size: 18px; }
+
+    h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      color: #cbd5e1;
+      margin: 24px 0 10px;
+      letter-spacing: -0.01em;
+    }
+
+    p { margin-bottom: 14px; color: #94a3b8; }
+    p strong { color: var(--text); font-weight: 500; }
+
+    /* ── Lead paragraph ──────────────────────────────── */
+    .lead {
+      font-size: 17px;
+      line-height: 1.65;
+      color: #94a3b8;
+      margin-bottom: 36px;
+      font-weight: 300;
+    }
+
+    /* ── Code blocks ─────────────────────────────────── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--teal);
+      border-radius: 6px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 16px 0 24px;
+      position: relative;
+    }
+
+    pre code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #94a3b8;
+    }
+
+    code { font-family: 'IBM Plex Mono', monospace; }
+
+    .code-lang {
+      position: absolute;
+      top: 10px; right: 14px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .inline-code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: var(--teal);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* ── Table ───────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 16px 0 24px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: #94a3b8;
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.015); }
+
+    td strong, td code { color: var(--text); }
+    td .mono { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+
+    /* ── Status chips ────────────────────────────────── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .chip-green { background: #22c55e15; color: #22c55e; border: 1px solid #22c55e30; }
+    .chip-amber { background: #f59e0b15; color: #f59e0b; border: 1px solid #f59e0b30; }
+    .chip-red   { background: #ef444415; color: #ef4444; border: 1px solid #ef444430; }
+    .chip-teal  { background: var(--teal-dim); color: var(--teal); border: 1px solid var(--teal-mid); }
+    .chip-gray  { background: #ffffff08; color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── Callout boxes ───────────────────────────────── */
+    .callout {
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .callout-body { flex: 1; }
+    .callout-body p { margin: 0; font-size: 14px; }
+    .callout-title { font-weight: 600; color: var(--text); margin-bottom: 4px; font-size: 14px; }
+
+    .callout-warn { background: #f59e0b08; border: 1px solid #f59e0b30; }
+    .callout-warn .callout-title { color: var(--amber); }
+
+    .callout-info { background: var(--teal-dim); border: 1px solid var(--teal-mid); }
+    .callout-info .callout-title { color: var(--teal); }
+
+    .callout-danger { background: #ef444408; border: 1px solid #ef444430; }
+    .callout-danger .callout-title { color: var(--red); }
+
+    /* ── Feature grid ────────────────────────────────── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      transition: border-color 0.15s;
+    }
+
+    .feature-card:hover { border-color: var(--border-hi); }
+
+    .feature-icon { font-size: 22px; margin-bottom: 10px; }
+
+    .feature-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+    }
+
+    .feature-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .feature-status { margin-top: 10px; }
+
+    /* ── Step list ───────────────────────────────────── */
+    .steps { list-style: none; margin: 16px 0; }
+
+    .steps li {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      background: var(--teal-dim);
+      border: 1px solid var(--teal-mid);
+      color: var(--teal);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .step-body { flex: 1; }
+    .step-title { font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .step-desc { font-size: 13.5px; color: var(--muted); margin: 0; }
+
+    /* ── Fee comparison ──────────────────────────────── */
+    .fee-comparison {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      margin: 16px 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+    }
+
+    .fee-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .fee-row:last-child { border-bottom: none; }
+    .fee-row.highlight { color: var(--teal); font-weight: 600; }
+    .fee-val { text-align: right; }
+
+    /* ── Divider ─────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+      margin: 40px 0;
+    }
+
+    /* ── Scroll indicator ────────────────────────────── */
+    .progress-bar {
+      position: fixed;
+      top: 52px; left: 0;
+      height: 2px;
+      background: var(--teal);
+      z-index: 200;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    /* ── Footer ──────────────────────────────────────── */
+    .footer {
+      margin-left: var(--sidebar-w);
+      padding: 28px 64px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 860px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 32px 24px 80px; }
+      .footer { margin-left: 0; padding: 20px 24px; }
+      h1 { font-size: 30px; }
+    }
+
+    /* Syntax highlighting */
+    .kw { color: #c084fc; }
+    .fn { color: #38bdf8; }
+    .st { color: #86efac; }
+    .cm { color: #475569; font-style: italic; }
+    .nu { color: #fb923c; }
+    .ty { color: var(--teal); }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+
+<!-- Top bar -->
+<header class="topbar">
+  <a href="#" class="topbar-logo">
+    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 4 L38 14 L38 30 L24 44 L10 30 L10 14 Z" fill="none" stroke="#00d4aa" stroke-width="1.5"/>
+      <path d="M24 4 L24 44 M10 14 L38 30 M10 30 L38 14" stroke="#00d4aa" stroke-width="0.8" stroke-opacity="0.4"/>
+      <circle cx="24" cy="24" r="4" fill="#00d4aa"/>
+    </svg>
+    <span class="topbar-name">Osprey</span>
+  </a>
+  <span class="topbar-tag">DOCS v18</span>
+  <nav class="topbar-links">
+    <a href="#overview">Overview</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#trading">Trading</a>
+    <a href="#architecture">Architecture</a>
+    <a href="https://osprey-three.vercel.app/" target="_blank" class="topbar-cta">Live App →</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <!-- Sidebar nav -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Getting Started</div>
+      <a href="#overview" class="sidebar-link active">Overview</a>
+      <a href="#quickstart" class="sidebar-link">Quick Start</a>
+      <a href="#setup" class="sidebar-link">Local Setup</a>
+      <a href="#testnet" class="sidebar-link">Testnet Guide</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Features</div>
+      <a href="#scanner" class="sidebar-link">Live Scanner <span class="badge ok">LIVE</span></a>
+      <a href="#regime" class="sidebar-link">Regime Detection <span class="badge ok">LIVE</span></a>
+      <a href="#signals" class="sidebar-link">Entry Signals <span class="badge ok">LIVE</span></a>
+      <a href="#backtester" class="sidebar-link">Backtester <span class="badge ok">LIVE</span></a>
+      <a href="#autotrader" class="sidebar-link">Auto-Trader <span class="badge ok">LIVE</span></a>
+      <a href="#live-trading" class="sidebar-link">Live Trading <span class="badge">BETA</span></a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Reference</div>
+      <a href="#signing" class="sidebar-link">EIP-712 Signing</a>
+      <a href="#fees" class="sidebar-link">Fee Model</a>
+      <a href="#architecture" class="sidebar-link">Architecture</a>
+      <a href="#env" class="sidebar-link">Environment</a>
+      <a href="#roadmap" class="sidebar-link">Roadmap</a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="section" id="overview">
+      <div class="hero-label">Documentation</div>
+      <h1>Funding rate<br/><span>intelligence</span> for<br/>Hyperliquid</h1>
+      <p class="lead">
+        Osprey scans every Hyperliquid perpetual every minute, scores funding rate opportunities,
+        and helps you execute delta-neutral positions via MetaMask — in demo or live mode.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📡</div>
+          <div class="feature-name">Live Scanner</div>
+          <div class="feature-desc">Real-time heatmap of all HL funding rates including NVDA, AAPL, GOLD, SPACEX.</div>
+          <div class="feature-status"><span class="chip chip-green">✓ Fully Live</span></div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <div class="feature-name">Regime Detection</div>
+          <div class="feature-desc">HOT / NEUTRAL / COLD market signal from top-20 OI-weighted pairs.</div>
+          <div class="feature-status"><span class="chip chip-green">✓ Fully Live</span></div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <div class="feature-name">Backtester</div>
+          <div class="feature-desc">Replay any strategy on 180 days of real HL historical data with Sharpe + drawdown.</div>
+          <div class="feature-status"><span class="chip chip-green">✓ Fully Live</span></div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-name">Auto-Trader</div>
+          <div class="feature-desc">Automated cycle engine — scans, enters, rotates, and exits. Full demo mode.</div>
+          <div class="feature-status"><span class="chip chip-green">✓ Fully Live</span></div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-name">Live Execution</div>
+          <div class="feature-desc">Real orders via MetaMask, EIP-712 signed locally, submitted to Hyperliquid.</div>
+          <div class="feature-status"><span class="chip chip-amber">⚡ Beta</span></div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧪</div>
+          <div class="feature-name">Demo Mode</div>
+          <div class="feature-desc">Paper trading with live rate data. No wallet or capital required.</div>
+          <div class="feature-status"><span class="chip chip-green">✓ Fully Live</span></div>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <div class="callout-title">Why Hyperliquid?</div>
+          <p>HL pays funding <strong>every hour</strong> vs every 8h on Binance/Bybit — 8× more collection opportunities.
+          It also lists TradFi perps (NVDA, AAPL, GOLD, WTIOIL, SPACEX) where rates are often extreme due to thinner liquidity.
+          No other DEX has this combination.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Quick Start -->
+    <section class="section" id="quickstart">
+      <h2><span class="icon">🚀</span> Quick Start</h2>
+      <p>Demo mode works immediately with no wallet or API key. Takes under 2 minutes.</p>
+
+      <pre><code><span class="cm"># Clone and install</span>
+git clone https://github.com/Xtley001/osprey.git
+<span class="kw">cd</span> osprey
+npm install
+
+<span class="cm"># Copy env and start dev server</span>
+cp .env.example .env.local
+npm run dev</code><span class="code-lang">bash</span></pre>
+
+      <p>Opens at <code class="inline-code">http://localhost:5173</code>. The scanner fetches live HL data immediately. No configuration needed for demo mode.</p>
+
+      <h3>Production build</h3>
+      <pre><code>npm run build          <span class="cm"># TypeScript compile + Vite bundle</span>
+npm run typecheck      <span class="cm"># tsc --noEmit — must report 0 errors</span>
+npm test               <span class="cm"># 71 unit tests across engine + math + utilities</span></code><span class="code-lang">bash</span></pre>
+
+      <h3>Deploy to Vercel</h3>
+      <pre><code>npm i -g vercel
+vercel --prod          <span class="cm"># vercel.json SPA rewrites pre-configured</span></code><span class="code-lang">bash</span></pre>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Setup -->
+    <section class="section" id="setup">
+      <h2><span class="icon">⚙️</span> Local Setup</h2>
+
+      <h3>Environment variables</h3>
+      <p>Copy <code class="inline-code">.env.example</code> to <code class="inline-code">.env.local</code> and configure:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="mono">VITE_HL_REST_URL</code></td>
+              <td><code class="mono">https://api.hyperliquid.xyz</code></td>
+              <td>Hyperliquid REST endpoint. Change to testnet URL for testing.</td>
+            </tr>
+            <tr>
+              <td><code class="mono">VITE_HL_WS_URL</code></td>
+              <td><code class="mono">wss://api.hyperliquid.xyz/ws</code></td>
+              <td>WebSocket endpoint (reserved for v2 streaming).</td>
+            </tr>
+            <tr>
+              <td><code class="mono">VITE_ENABLE_REAL_TRADING</code></td>
+              <td><code class="mono">true</code></td>
+              <td>Set <code class="mono">false</code> to hide the Live Mode toggle.</td>
+            </tr>
+            <tr>
+              <td><code class="mono">VITE_ENABLE_TESTNET</code></td>
+              <td><code class="mono">true</code></td>
+              <td>Set <code class="mono">false</code> to disable testnet switch.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Fee tiers</h3>
+      <p>If your 30-day HL volume qualifies for a reduced fee tier, update <code class="inline-code">src/utils/constants.ts</code>:
+      the backtester and all fee previews recalculate automatically.</p>
+
+      <pre><code><span class="kw">export const</span> <span class="ty">DEFAULT_STRATEGY</span> = {
+  takerFee: <span class="nu">0.00035</span>,   <span class="cm">// ← update to match your volume tier</span>
+  makerFee: <span class="nu">0.0001</span>,    <span class="cm">// ← update to match your volume tier</span>
+  <span class="cm">// ... other strategy defaults</span>
+};</code><span class="code-lang">typescript</span></pre>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Testnet -->
+    <section class="section" id="testnet">
+      <h2><span class="icon">🧪</span> Testnet Guide</h2>
+      <p>Before using live order execution on mainnet, always verify signing works on HL testnet. This is a 2–4 hour process.</p>
+
+      <ol class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Point at testnet</div>
+            <p class="step-desc">In <code class="inline-code">.env.local</code>, set <code class="inline-code">VITE_HL_REST_URL=https://api.hyperliquid-testnet.xyz</code></p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Get testnet funds</div>
+            <p class="step-desc">Visit <code class="inline-code">app.hyperliquid-testnet.xyz</code> and request test USDC from the faucet.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Connect testnet wallet</div>
+            <p class="step-desc">Connect MetaMask with a wallet that holds testnet funds. Osprey fetches your testnet balance automatically.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Place a minimum-size order</div>
+            <p class="step-desc">Select a liquid pair (BTC recommended), enter the smallest allowable size, and submit. Watch the raw response from the <code class="inline-code">/exchange</code> endpoint in devtools — the error message will identify any signing issue precisely.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Confirm, then flip to mainnet</div>
+            <p class="step-desc">Once the order appears in your testnet account, set <code class="inline-code">VITE_HL_REST_URL</code> back to the mainnet URL.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <div class="callout-title">Known issue — decimal precision</div>
+          <p>The current order submission uses <code class="inline-code">.toFixed(6)</code> for price and size. HL's matching engine
+          uses per-asset <code class="inline-code">szDecimals</code> from the universe response. For assets with fewer decimal places
+          (e.g. BTC's price requires no trailing zeros), this may cause rejections. Use the testnet to verify before mainnet.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Live Scanner -->
+    <section class="section" id="scanner">
+      <h2><span class="icon">📡</span> Live Scanner</h2>
+      <p>The scanner fetches the full <code class="inline-code">metaAndAssetCtxs</code> payload from Hyperliquid every 60 seconds and renders all active perpetual markets as a sortable, filterable heatmap.</p>
+
+      <h3>Rate classification</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>8h Equivalent</th><th>Annual Equiv.</th><th>Signal</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip chip-gray">COLD</span></td><td>&lt; 0.01%</td><td>&lt; 11%</td><td>Avoid</td></tr>
+            <tr><td><span class="chip chip-teal">WARM</span></td><td>0.01 – 0.04%</td><td>11 – 44%</td><td>Watch</td></tr>
+            <tr><td><span class="chip chip-amber">HOT</span></td><td>0.04 – 0.10%</td><td>44 – 110%</td><td>Consider entry</td></tr>
+            <tr><td><span class="chip chip-red">FIRE</span></td><td>&gt; 0.10%</td><td>&gt; 110%</td><td>Strong entry signal</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>TradFi pairs</h3>
+      <p>Osprey covers HL's full TradFi listing — stocks, commodities, and private-company perps. These often carry elevated funding due to thinner liquidity and smaller trader base.</p>
+      <p><strong>Stocks</strong>: NVDA, AAPL, GOOGL, TSLA, AMZN, MSFT, META, NFLX, AMD, COIN, MSTR, PLTR, UBER<br/>
+      <strong>Private</strong>: SPACEX<br/>
+      <strong>Commodities</strong>: GOLD, SILVER, WTIOIL, NATGAS, COPPER</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Regime -->
+    <section class="section" id="regime">
+      <h2><span class="icon">🧠</span> Regime Detection</h2>
+      <p>The regime engine computes a market-wide signal by aggregating the top 20 perpetuals by open interest (OI). This distinguishes between a market where funding is structurally elevated vs. isolated spikes on one pair.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Regime</th><th>What it means</th><th>Recommended action</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="chip chip-red">HOT</span></td>
+              <td>Majority of top-OI pairs paying elevated funding. Strong systematic upward bias from leveraged longs.</td>
+              <td>Actively look for entries. Multiple pair exposure is appropriate.</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-amber">NEUTRAL</span></td>
+              <td>Mixed market. Some pairs elevated, others flat. No strong directional bias.</td>
+              <td>Selective entries only. Wait for ENTER signal with persistence.</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-teal">COLD</span></td>
+              <td>Low market-wide funding. Most shorts are not being paid meaningfully.</td>
+              <td>Exit existing positions, hold cash, wait for regime shift.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Signals -->
+    <section class="section" id="signals">
+      <h2><span class="icon">🎯</span> Entry Signals</h2>
+      <p>Each pair receives a per-pair signal requiring <strong>rate persistence</strong> — funding must remain elevated for at least 2 consecutive hours before an ENTER fires. This filters out transient spikes that don't persist long enough to cover fees.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Signal</th><th>Condition</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="chip chip-green">ENTER</span></td>
+              <td>Rate ≥ threshold AND elevated for ≥ minHoursElevated</td>
+              <td>Open delta-neutral position now.</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gray">WAIT</span></td>
+              <td>Rate ≥ threshold BUT not yet persistent</td>
+              <td>Rate is elevated but too new. Watch — ENTER may fire next hour.</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-amber">EXIT</span></td>
+              <td>Rate fell below exitRateThreshold</td>
+              <td>Close position. Funding no longer covers fees at this rate.</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-red">AVOID</span></td>
+              <td>Rate is negative</td>
+              <td>Shorts are paying longs. Do not enter a short-perp position.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Default thresholds</h3>
+      <pre><code>entryRateThreshold:  <span class="nu">0.0004</span>   <span class="cm">// per-hour rate (≈ 0.04% / 8h equivalent)</span>
+exitRateThreshold:   <span class="nu">0.0002</span>   <span class="cm">// exit when rate falls below this</span>
+minHoursElevated:    <span class="nu">2</span>        <span class="cm">// consecutive hours above threshold required</span></code><span class="code-lang">typescript</span></pre>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Backtester -->
+    <section class="section" id="backtester">
+      <h2><span class="icon">📊</span> Backtester</h2>
+      <p>A pure TypeScript simulation engine. Hour-by-hour replay using real HL historical data from the <code class="inline-code">fundingHistory</code> API endpoint. No external dependencies — fully deterministic and testable.</p>
+
+      <h3>What it calculates</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Sharpe Ratio</strong></td><td>Risk-adjusted return. Above 1.5 is good for this strategy type.</td></tr>
+            <tr><td><strong>Max Drawdown</strong></td><td>Worst peak-to-trough equity decline. Used to size position risk.</td></tr>
+            <tr><td><strong>Win Rate</strong></td><td>Percentage of trades that netted positive after fees.</td></tr>
+            <tr><td><strong>Break-even Hours</strong></td><td>Hours a position must stay open to cover entry + exit fees.</td></tr>
+            <tr><td><strong>Annualised Yield</strong></td><td>Projected return extrapolated from the simulation period.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <div class="callout-title">Synthetic fallback</div>
+          <p>When HL's historical API is unreachable, the backtester falls back to rate data generated from real historical distributions.
+          The synthetic data is calibrated to actual HL rate ranges but is not tick-level historical data.
+          Results from real API data are more reliable.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Auto-Trader -->
+    <section class="section" id="autotrader">
+      <h2><span class="icon">🤖</span> Auto-Trader</h2>
+      <p>The auto-trader runs a decision cycle every 60 seconds. In demo mode it executes automatically with no confirmation. In live mode, it prompts MetaMask for each order.</p>
+
+      <h3>Cycle logic</h3>
+      <pre><code><span class="cm">// Every 60 seconds:</span>
+<span class="nu">1</span>. Fetch live rates from HL
+<span class="nu">2</span>. Compute regime signal
+<span class="nu">3</span>. For each open position: check EXIT signal → close if triggered
+<span class="nu">4</span>. Check rotation: if a better pair &gt; ROTATION_THRESHOLD better, flag rotation
+<span class="nu">5</span>. Scan for new ENTER signals (up to maxPositions limit)
+<span class="nu">6</span>. Place orders for new entries</code><span class="code-lang">typescript</span></pre>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <div class="callout-title">Rotation is intelligence-only in v18</div>
+          <p>The rotation engine shows the top 3 rotation targets and calculates whether rotation is profitable after fees.
+          It does not automatically execute rotations. Full automated rotation requires a persistent backend service — planned for v2.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Live Trading -->
+    <section class="section" id="live-trading">
+      <h2><span class="icon">⚡</span> Live Trading <span class="chip chip-amber" style="font-size:11px;vertical-align:middle;margin-left:8px">Beta</span></h2>
+      <p>Live order execution is functional but labeled <strong>Beta</strong> until signing has been verified on testnet.
+      Everything else in Osprey is production-ready.</p>
+
+      <h3>What works</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Component</th><th>Status</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>MetaMask connection</td>
+              <td><span class="chip chip-green">✓ Live</span></td>
+              <td>Real wallet connect via <code class="inline-code">ethers.BrowserProvider</code></td>
+            </tr>
+            <tr>
+              <td>Balance fetch</td>
+              <td><span class="chip chip-green">✓ Live</span></td>
+              <td>Real HL account state via <code class="inline-code">clearinghouseState</code></td>
+            </tr>
+            <tr>
+              <td>EIP-712 signing</td>
+              <td><span class="chip chip-green">✓ Live</span></td>
+              <td>Correct domain + types. Verify decimal precision on testnet.</td>
+            </tr>
+            <tr>
+              <td>Asset index lookup</td>
+              <td><span class="chip chip-green">✓ Fixed v18</span></td>
+              <td><code class="inline-code">ensureCoinIndex()</code> resolves correct HL universe index.</td>
+            </tr>
+            <tr>
+              <td>Order submission</td>
+              <td><span class="chip chip-amber">⚡ Beta</span></td>
+              <td>Testnet verification recommended before mainnet capital.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Trading flow</h3>
+      <ol class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Deposit USDC on Hyperliquid</div>
+            <p class="step-desc">At <code class="inline-code">app.hyperliquid.xyz</code> — this is your trading capital.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Connect MetaMask in Osprey Settings</div>
+            <p class="step-desc">Osprey fetches your real HL balance automatically. Your private key never leaves MetaMask.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Switch sidebar to Live mode</div>
+            <p class="step-desc">The mode banner changes from demo to live. All signals now use your real balance as the ceiling for position sizing.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Click Enter on a pair with ENTER signal</div>
+            <p class="step-desc">Modal shows real balance, size slider, fee preview, break-even hours, and projected hourly income.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Confirm → MetaMask prompt → order sent</div>
+            <p class="step-desc">Osprey signs and submits the perp short to HL. MetaMask displays the EIP-712 typed data for your review before signing.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title">Execute spot hedge manually</div>
+            <p class="step-desc">HL spot or a CEX for the long leg. This step is always manual — HL's spot market doesn't cover all perp pairs.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Signing -->
+    <section class="section" id="signing">
+      <h2><span class="icon">🔐</span> EIP-712 Signing</h2>
+      <p>Osprey uses Hyperliquid's phantom agent signing scheme. The signer never sees the raw order — it signs a typed hash of a <code class="inline-code">connectionId</code> derived from the action.</p>
+
+      <pre><code><span class="cm">// 1. Hash the serialised action JSON</span>
+<span class="kw">const</span> actionHash = ethers.<span class="fn">keccak256</span>(
+  ethers.<span class="fn">toUtf8Bytes</span>(JSON.<span class="fn">stringify</span>(action))
+);
+
+<span class="cm">// 2. Build the connectionId</span>
+<span class="kw">const</span> connectionId = ethers.<span class="fn">keccak256</span>(
+  ethers.AbiCoder.<span class="fn">defaultAbiCoder</span>().<span class="fn">encode</span>(
+    [<span class="st">'bytes32'</span>, <span class="st">'uint64'</span>, <span class="st">'address'</span>],
+    [actionHash, BigInt(nonce), vaultAddress ?? ethers.ZeroAddress]
+  )
+);
+
+<span class="cm">// 3. Sign the phantom agent — domain is always chainId 1337</span>
+<span class="kw">const</span> domain = {
+  name: <span class="st">'Exchange'</span>, version: <span class="st">'1'</span>,
+  chainId: <span class="nu">1337</span>,     <span class="cm">// HL uses 1337 regardless of actual chain</span>
+  verifyingContract: <span class="st">'0x0000000000000000000000000000000000000000'</span>,
+};
+<span class="kw">const</span> types  = { Agent: [
+  { name: <span class="st">'source'</span>,       type: <span class="st">'string'</span>  },
+  { name: <span class="st">'connectionId'</span>, type: <span class="st">'bytes32'</span> },
+]};
+<span class="kw">const</span> value  = { source: <span class="st">'a'</span>, connectionId };
+
+<span class="kw">const</span> sig = <span class="kw">await</span> signer.<span class="fn">signTypedData</span>(domain, types, value);</code><span class="code-lang">typescript</span></pre>
+
+      <div class="callout callout-info">
+        <div class="callout-icon">ℹ️</div>
+        <div class="callout-body">
+          <div class="callout-title">Why chainId 1337?</div>
+          <p>Hyperliquid's signing domain is hardcoded to chainId <code class="inline-code">1337</code> regardless of which chain the user's MetaMask is connected to.
+          This is an intentional HL protocol decision — do not change it to match the actual network.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Fees -->
+    <section class="section" id="fees">
+      <h2><span class="icon">💰</span> Fee Model</h2>
+      <p>Osprey v18 uses minimum-fee order routing by default. Entry orders use post-only maker (<code class="inline-code">Alo</code>), exits use immediate-or-cancel taker (<code class="inline-code">Ioc</code>).</p>
+
+      <div class="fee-comparison">
+        <div class="fee-row">
+          <span>v17 round-trip ($5k notional, both taker)</span>
+          <span class="fee-val">$3.50</span>
+        </div>
+        <div class="fee-row">
+          <span>v18 round-trip (Alo entry + Ioc exit)</span>
+          <span class="fee-val">$2.25  −36%</span>
+        </div>
+        <div class="fee-row highlight">
+          <span>v18 best case (Alo entry + Alo exit)</span>
+          <span class="fee-val">$1.00  −71%</span>
+        </div>
+      </div>
+
+      <h3>Volume tiers</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>30d Volume</th><th>Maker</th><th>Taker</th></tr></thead>
+          <tbody>
+            <tr><td>Default</td><td>0.010%</td><td>0.035%</td></tr>
+            <tr><td>≥ $5M</td><td>0.008%</td><td>0.030%</td></tr>
+            <tr><td>≥ $25M</td><td>0.005%</td><td>0.025%</td></tr>
+            <tr><td>≥ $100M</td><td>0.002%</td><td>0.020%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>If an <code class="inline-code">Alo</code> order is rejected by the matching engine (fast market, would immediately cross), Osprey's error message will include <em>"Would immediately cross"</em> — retry with <code class="inline-code">tif: 'Ioc'</code>.</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Architecture -->
+    <section class="section" id="architecture">
+      <h2><span class="icon">🏗️</span> Architecture</h2>
+
+      <pre><code>src/
+├── api/
+│   └── hyperliquid.ts      <span class="cm">← HL REST client, EIP-712 signing, order placement</span>
+├── engine/
+│   ├── autotrader.ts       <span class="cm">← cycle engine: enter/exit/rotate decision logic</span>
+│   ├── backtester.ts       <span class="cm">← hourly simulation over historical funding + OHLCV</span>
+│   ├── regime.ts           <span class="cm">← HOT/NEUTRAL/COLD market regime classifier</span>
+│   └── signals.ts          <span class="cm">← per-pair ENTER/WAIT/EXIT/AVOID signal generator</span>
+├── store/
+│   ├── appStore.ts         <span class="cm">← wallet, mode, regime state (Zustand)</span>
+│   ├── autoTraderStore.ts  <span class="cm">← auto-trader config + cycle runner</span>
+│   ├── positionStore.ts    <span class="cm">← open positions (demo + live)</span>
+│   └── scannerStore.ts     <span class="cm">← live funding rate cache</span>
+├── pages/                  <span class="cm">← Scanner · PairDetail · Backtester · Portfolio · Analytics · Settings</span>
+├── components/             <span class="cm">← EntryModal · PositionTicker · AutoTraderService · …</span>
+└── types/                  <span class="cm">← TypeScript interfaces for all domain objects</span></code><span class="code-lang">text</span></pre>
+
+      <h3>Tech stack</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Frontend</td><td>React 18 + Vite + TypeScript (strict)</td><td>Fast dev, strict types, 0 errors enforced</td></tr>
+            <tr><td>State</td><td>Zustand</td><td>Lightweight, no boilerplate</td></tr>
+            <tr><td>Data</td><td>Hyperliquid REST API</td><td>Live rates, 180d history, account state</td></tr>
+            <tr><td>Signing</td><td>MetaMask + ethers v6</td><td>EIP-712-variant, no key exposure</td></tr>
+            <tr><td>Charts</td><td>Canvas API (custom)</td><td>Zero lib overhead</td></tr>
+            <tr><td>Testing</td><td>Vitest — 71 unit tests</td><td>Engine + math + utilities</td></tr>
+            <tr><td>PWA</td><td>Service Worker + Web App Manifest</td><td>Installable, offline-capable</td></tr>
+            <tr><td>Deploy</td><td>Vercel</td><td>Zero config, instant deploys</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Env reference -->
+    <section class="section" id="env">
+      <h2><span class="icon">📋</span> Environment Reference</h2>
+
+      <pre><code><span class="cm"># .env.example — copy to .env.local</span>
+
+<span class="cm"># Mainnet (default)</span>
+<span class="ty">VITE_HL_REST_URL</span>=https://api.hyperliquid.xyz
+<span class="ty">VITE_HL_WS_URL</span>=wss://api.hyperliquid.xyz/ws
+
+<span class="cm"># Testnet — uncomment to test signing before mainnet</span>
+<span class="cm"># VITE_HL_REST_URL=https://api.hyperliquid-testnet.xyz</span>
+<span class="cm"># VITE_HL_WS_URL=wss://api.hyperliquid-testnet.xyz/ws</span>
+
+<span class="cm"># Feature flags</span>
+<span class="ty">VITE_ENABLE_REAL_TRADING</span>=true   <span class="cm"># set false to hide Live Mode toggle</span>
+<span class="ty">VITE_ENABLE_TESTNET</span>=true        <span class="cm"># set false to disable testnet switch</span></code><span class="code-lang">bash</span></pre>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Roadmap -->
+    <section class="section" id="roadmap">
+      <h2><span class="icon">🗺️</span> Roadmap</h2>
+
+      <h3>Immediate</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Verify EIP-712 signing on testnet with real small order</td><td><span class="chip chip-amber">In Progress</span></td></tr>
+            <tr><td>2</td><td>Fix decimal precision using per-asset <code class="mono">szDecimals</code></td><td><span class="chip chip-amber">In Progress</span></td></tr>
+            <tr><td>3</td><td>Label live trading as Beta in UI</td><td><span class="chip chip-green">Done</span></td></tr>
+            <tr><td>4</td><td>Testnet toggle in Settings UI</td><td><span class="chip chip-gray">Planned</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Next 30 days</h3>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td>Telegram alert bot — ENTER signal fires on watchlisted pairs</td><td><span class="chip chip-gray">Planned</span></td></tr>
+            <tr><td>Watchlist — save pairs, alert when threshold hit</td><td><span class="chip chip-gray">Planned</span></td></tr>
+            <tr><td>Per-account fee tier auto-detection from HL user state</td><td><span class="chip chip-gray">Planned</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>60–90 days</h3>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td>Backend service — Node.js + PostgreSQL for persistent positions</td><td><span class="chip chip-gray">Planned</span></td></tr>
+            <tr><td>Rotation strategy backtesting (hold vs rotate comparison)</td><td><span class="chip chip-gray">Planned</span></td></tr>
+            <tr><td>Mobile-optimised entry flow</td><td><span class="chip chip-gray">Planned</span></td></tr>
+            <tr><td>GTC limit exit orders for full maker round-trips (−71% vs v17)</td><td><span class="chip chip-gray">Planned</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  <span>Osprey v18 · MIT License</span>
+  <span>Built on Hyperliquid · ethers v6 · React 18</span>
+</footer>
+
+<script>
+  // Scroll progress bar
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+    bar.style.width = pct + '%';
+  });
+
+  // Sidebar active link tracking
+  const sections = document.querySelectorAll('.section[id]');
+  const links    = document.querySelectorAll('.sidebar-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
