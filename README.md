@@ -13,7 +13,7 @@
 
 Osprey scans every Hyperliquid perpetual every minute, scores funding rate opportunities, and executes delta-neutral positions via MetaMask — in demo or live mode.
 
-[**Try it live →**](https://osprey-three.vercel.app/)
+[**Try it live →**](https://osprey-three.vercel.app/)    [**Docs →**](https://xtley001.github.io/osprey)
 
 </div>
 
