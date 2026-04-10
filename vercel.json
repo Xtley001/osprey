@@ -5,7 +5,7 @@
   ],
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node@3"
+      "runtime": "@vercel/node@3.2.28"
     }
   },
   "headers": [
