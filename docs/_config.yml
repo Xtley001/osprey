@@ -1,0 +1,6 @@
+# GitHub Pages config — tells Pages to serve docs/ as the site root
+# Enables Jekyll so the HTML is served as-is (no Jekyll processing needed
+# since docs/index.html is plain HTML with no liquid templates)
+theme: null
+include:
+  - index.html
