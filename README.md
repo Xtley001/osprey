@@ -77,6 +77,48 @@ At 0.010%/hr on $500 perp notional:
 
 ---
 
+## Performance & Fee Model
+
+### Fee optimisation
+
+Osprey defaults to post-only (Alo) order routing on all executions.
+
+| Order Type  | Fee    | $5k Round-Trip Cost |
+|-------------|--------|----------------------|
+| Alo (maker) | 0.010% | $2.25               |
+| IoC (taker) | 0.035% | $3.50               |
+| **Savings** | -      | **$1.25 / 36%**     |
+
+At 1,000 executions: $1,250 recovered from order type selection alone.
+
+Fallback logic: if an order would cross the book (spread is thin), Osprey falls back to IoC to avoid post-only rejection. This matters most during HOT regimes when spreads compress.
+
+### Why hourly settlement matters
+
+Hyperliquid pays funding every hour. Binance pays every 8 hours.
+
+The mathematical difference in yield from settlement frequency alone is small — both schedules converge near the same continuous-compounding limit at equal underlying rates.
+
+The practical edge is **capital efficiency**:
+
+- On Binance: earned funding sits idle for up to 8 hours per cycle
+- On Hyperliquid: earned funding is available for redeployment every hour
+
+At 0.05%/hr on a $10k position: ~$5/hr collected and immediately redeployable. Over a 24-hour HOT period: **24 reinvestment windows vs 3 on Binance**.
+
+Osprey's regime signals and entry logic are built around the 60-minute epoch — recalculating every minute to align with settlement timing.
+
+### Regime detection (v18 vs v17)
+
+| Version | Approach | Result |
+|---------|----------|--------|
+| v17 | Magnitude-only scoring | Chased spikes; high false-positive rate |
+| v18 | Persistence x magnitude | ~40% of marginal entries filtered out |
+
+v18 uses a 30-day rolling mean across the top 20 OI-weighted pairs to set the regime baseline. HOT threshold = 2 standard deviations above mean.
+
+---
+
 ## Architecture
 
 ```
@@ -117,7 +159,7 @@ src/
 ## Delta-neutral position lifecycle
 
 ```
-SCANNING ──→ ENTERING ──→ ACTIVE ──→ REBALANCING ──→ ACTIVE
+SCANNING --→ ENTERING --→ ACTIVE --→ REBALANCING --→ ACTIVE
     ↑                         │                         │
     │                         ↓                         ↓
     └──────────────── EXITING ←─────────────────────────┘
