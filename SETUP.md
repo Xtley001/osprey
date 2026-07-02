@@ -1,6 +1,6 @@
 # Osprey — Setup Guide
 
-Osprey is an npm-workspaces monorepo (`apps/web` + `packages/engine`, `packages/server`, `packages/sdk` — see [README.md](./README.md#repo-layout)). This guide covers running the web app; `packages/server`/`packages/sdk` are documented in [docs/architecture/api-sdk.md](./docs/architecture/api-sdk.md).
+Osprey is an npm-workspaces monorepo (`apps/web` + `packages/engine`, `packages/server`, `packages/sdk` — see [README.md](./README.md#repository-layout)). This guide covers running the web app; `packages/server`/`packages/sdk` are documented in [docs/architecture/api-sdk.md](./docs/architecture/api-sdk.md).
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ Osprey is an npm-workspaces monorepo (`apps/web` + `packages/engine`, `packages/
 - npm 9+
 - A Hyperliquid account (for live mode)
 
-## Quick start
+## Quickstart
 
 ```bash
 git clone https://github.com/Xtley001/osprey.git
@@ -110,17 +110,17 @@ Set `VITE_ENABLE_TESTNET=true`, then select "Testnet" in Settings → Account Mo
 
 ---
 
-## Running tests
+## Testing
 
 ```bash
-npm run test
+npm test
 ```
 
 Tests cover the core engine logic (funding math, rotation, regime detection, circuit breaker, store orchestration) without any network calls. See [TESTING.md](./TESTING.md) for the full test suite structure.
 
 ---
 
-## Building for production
+## Production build
 
 ```bash
 npm run build                          # root script proxies to apps/web

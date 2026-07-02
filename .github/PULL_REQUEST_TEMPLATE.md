@@ -1,4 +1,4 @@
-## What does this PR do?
+## Summary
 
 <!-- Brief description of the change -->
 
@@ -14,7 +14,7 @@
 ## Checklist
 
 - [ ] `npm run typecheck` passes with no errors
-- [ ] `npm test` passes (all 37 tests green)
+- [ ] `npm test` passes (all workspaces green)
 - [ ] `npm run build` succeeds
 - [ ] Tested in the browser on `npm run dev`
 - [ ] No private keys or secrets committed

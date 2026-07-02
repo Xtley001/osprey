@@ -6,14 +6,14 @@ Status: **in progress**. This document is the design reference for turning Ospre
 
 ## 1. Why this exists
 
-Osprey today is a excellent single-tenant, browser-only delta-neutral funding harvester (see [`INTERNALS.md`](../../INTERNALS.md) for how the engine itself works). The gap between that and "the funding rate engine institutions integrate with" is entirely infrastructural, not algorithmic:
+Osprey today is an excellent single-tenant, browser-only delta-neutral funding harvester (see [`INTERNALS.md`](../../INTERNALS.md) for how the engine itself works). The gap between that and "the funding rate engine institutions integrate with" is entirely infrastructural, not algorithmic:
 
 - No process can run the harvest loop without a browser tab open.
 - No two parties can use one deployment — every wallet needs its own browser session.
 - Nothing exposes engine decisions or account state as a network API.
 - There is no client library — anyone wanting programmatic access would have to reverse-engineer `src/`.
 
-The engine logic itself (`src/engine/*.ts`, `src/api/hyperliquid.ts`, `src/api/fees.ts`) does not need to change. It's already pure TypeScript with zero React dependency and 104 passing tests. This plan is about **giving that logic a server-shaped home and a documented client contract** — not rewriting the funding-rate math.
+The engine logic itself (`src/engine/*.ts`, `src/api/hyperliquid.ts`, `src/api/fees.ts`) does not need to change. It's already pure TypeScript with zero React dependency and a passing test suite (see [`TESTING.md`](../../TESTING.md)). This plan is about **giving that logic a server-shaped home and a documented client contract** — not rewriting the funding-rate math.
 
 ## 2. Non-goals (explicit, to prevent scope creep)
 
@@ -25,7 +25,7 @@ The engine logic itself (`src/engine/*.ts`, `src/api/hyperliquid.ts`, `src/api/f
 
 ## 3. Target shape: a monorepo
 
-```
+```text
 osprey/
 ├── apps/
 │   └── web/                 ← today's src/ (Vite/React app), unchanged behavior
@@ -104,7 +104,7 @@ This was checked directly against the file (`src/api/signing.ts`), not assumed. 
 
 ### Data model (new — nothing here exists today)
 
-```
+```text
 tenants
   id, name, api_key_hash, api_key_prefix, created_at
 
@@ -143,7 +143,7 @@ Document this clearly for firms doing security diligence — this is exactly the
 ### API surface — mapped 1:1 to what the engine already does, nothing invented
 
 **REST:**
-```
+```text
 POST   /v1/tenants                       — provision a tenant, returns API key (shown once)
 GET    /v1/rates                         — current funding rates for all pairs (public, no auth — same data Scanner shows)
 GET    /v1/positions                     — tenant's open positions
