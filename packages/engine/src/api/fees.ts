@@ -91,7 +91,7 @@ export const FALLBACK_FEES: OspreyFees = {
   perpMaker:          0.00015,   // 0.015%
   spotTaker:          0.00070,   // 0.070%
   spotMaker:          0.00040,   // 0.040%
-  roundTripRate:      0.00120,   // (0.00015 + 0.00045) × 2 = 0.00120 for perp only
+  roundTripRate:      0.00170,   // perpMaker + perpTaker + spotMaker + spotTaker (all 4 legs)
   stakingDiscountPct: 0,
   perpTierLabel:      'Base (Tier 0)',
   spotTierLabel:      'Base (Tier 0)',
@@ -346,7 +346,7 @@ export function computePositionNetFunding(params: {
 
   const totalFees    = entryFees + exitFees;
   const netFunding   = grossFunding - totalFees;
-  const feeAdjustedRate = hoursHeld > 0
+  const feeAdjustedRate = hoursHeld > 0 && perpNotional > 0
     ? fundingRateHr - (totalFees / perpNotional / hoursHeld)
     : fundingRateHr;
 

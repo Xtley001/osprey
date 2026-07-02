@@ -10,12 +10,19 @@ packages/engine/test/          ← pure engine logic — no React, no network
 ├── signals.test.ts         ← computeSignal: ENTER/WAIT/AVOID gating, persistence counting
 ├── circuitBreaker.test.ts  ← Drawdown limiting: fires at threshold, blocks entries, allows exits
 ├── rotation.test.ts        ← shouldRotate cost/break-even math (round-trip fee fix)
-└── fundingMath.test.ts     ← Rate classification, formatting helpers (USD, rate, duration)
+├── fundingMath.test.ts     ← Rate classification, formatting helpers (USD, rate, duration)
+└── stress.test.ts          ← Adversarial inputs (NaN/Infinity/negatives/boundaries) + 5,000-cycle
+                              randomized soak asserting slot limits, no negative-rate entries,
+                              no duplicate exits, circuit-breaker and regime-gate invariants
 
 apps/web/store-tests/          ← Zustand orchestration — mocks @osprey/engine's HL API surface
 ├── harvestStore.test.ts    ← Toggle gating, config updates, mocked order placement, logging
 ├── reconciliation.test.ts  ← Startup position recovery (MATCH / ORPHAN-ON-HL / ORPHAN-LOCAL)
-└── phase6.test.ts          ← Spot hedge automation: entry/exit, emergency unwind
+├── phase6.test.ts          ← Spot hedge automation: entry/exit, emergency unwind
+├── chaos.test.ts           ← API failure injection: order rejects/timeouts, malformed HL data,
+                              null account state during EXIT, overlapping runCycle concurrency
+└── datastress.test.ts      ← Large-dataset stress (5k-pair scanner, 10k-trade history),
+                              position-id uniqueness across reloads, equity-curve growth cap
 
 packages/server/test/          ← Fastify route smoke tests (app.inject(), no real network)
 └── app.test.ts

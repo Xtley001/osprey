@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
@@ -14,8 +15,9 @@ export async function requireApiKey(req: FastifyRequest, reply: FastifyReply) {
     // No key configured — server is running in local/dev mode, allow through.
     return;
   }
-  const provided = req.headers['x-api-key'];
-  if (provided !== expected) {
+  const provided = Buffer.from(String(req.headers['x-api-key'] ?? ''));
+  const want     = Buffer.from(expected);
+  if (provided.length !== want.length || !timingSafeEqual(provided, want)) {
     return reply.code(401).send({ error: 'unauthorized', message: 'Missing or invalid X-API-Key header' });
   }
 }

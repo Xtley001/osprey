@@ -32,8 +32,11 @@ export async function connectWalletConnect(projectId: string): Promise<WalletCon
 
   // Dynamic import — only loaded when WalletConnect is actually used.
   // Install @walletconnect/ethereum-provider to enable this path.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { EthereumProvider } = await import('@walletconnect/ethereum-provider' as any);
+  // The specifier is kept in a variable so Vite/Rollup skip static resolution:
+  // with a literal, dev-time import analysis 500s every route when this
+  // optional dep is absent. The runtime failure is caught by the caller.
+  const wcModule = '@walletconnect/ethereum-provider';
+  const { EthereumProvider } = await import(/* @vite-ignore */ wcModule);
 
   const provider = await EthereumProvider.init({
     projectId,

@@ -22,7 +22,11 @@ interface PositionStore {
   clearAll:       () => void;
 }
 
-let posIdCounter = 1;
+// IDs must stay unique across page reloads: positions persist to localStorage
+// but module state does not, so a plain counter would collide after reload.
+function newPositionId(): string {
+  return `pos-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export const usePositionStore = create<PositionStore>()(
   persist(
@@ -31,7 +35,7 @@ export const usePositionStore = create<PositionStore>()(
       trades:    [],
 
       openPosition: (p) => {
-        const id = `pos-${posIdCounter++}`;
+        const id = newPositionId();
         set(s => ({ positions: [...s.positions, { ...p, id }] }));
         return id;
       },
