@@ -217,16 +217,36 @@ SCANNING → ENTERING → ACTIVE → REBALANCING → ACTIVE
 
 ## File map (current)
 
+As of the [API/SDK monorepo restructure](./docs/architecture/api-sdk.md), the portable engine/API/types moved into `packages/engine/`, decoupled from the React app. See that doc for the full rationale and what moved vs. what stayed.
+
 ```
-src/engine/
+packages/engine/src/engine/
   harvest.ts          ← Core cycle: entries, exits, rotations, circuit breaker
   portfolio.ts        ← Multi-pair sizing: OI caps, tier allocation
   deltaHedge.ts       ← Spot hedge management, drift + rebalancing
   regime.ts           ← HOT/NEUTRAL/COLD detection, rotation cost/benefit
   signals.ts          ← Per-pair ENTER/WAIT/EXIT signal logic
-  HarvestService.tsx  ← React service component, drives the cycle on rate updates
 
-src/store/
+packages/engine/src/api/
+  hyperliquid.ts      ← HL REST API: rates, candles, account state, orders
+  fees.ts             ← Dynamic fee fetching and calculations
+
+packages/engine/src/signing.ts
+  buildAgentSigner, generateAgentKey, buildApproveAgentPayload  ← portable agent-key primitives (no browser APIs)
+
+packages/engine/src/types/
+  account.ts          ← WalletState, RegimeState (canonical)
+  harvest.ts           ← Engine config and action types
+  funding.ts, position.ts ← Rate and position data shapes
+
+apps/web/src/engine/
+  HarvestService.tsx  ← React service component, drives the cycle on rate updates (imports @osprey/engine)
+
+apps/web/src/api/
+  signing.ts          ← Browser wallet / WalletConnect signing + agent-key encryption-at-rest (re-exports the portable pieces from @osprey/engine)
+  walletConnect.ts    ← WalletConnect v2 integration
+
+apps/web/src/store/
   harvestStore.ts       ← Engine state + order execution orchestration
   positionStore.ts      ← Position + trade tracking (persisted to localStorage)
   scannerStore.ts       ← Rate polling, pair metadata
@@ -234,26 +254,15 @@ src/store/
   feeStore.ts           ← Dynamic fee tier caching
   equityCurveStore.ts   ← In-memory portfolio equity history
 
-src/api/
-  hyperliquid.ts      ← HL REST API: rates, candles, account state, orders
-  fees.ts             ← Dynamic fee fetching and calculations
-  signing.ts          ← Signer abstraction: browser wallet / Agent Key / WalletConnect
-  walletConnect.ts    ← WalletConnect v2 integration
-
-src/hooks/
+apps/web/src/hooks/
   useWallet.ts                  ← Unified wallet hook
   useFees.ts                    ← Fee fetching on wallet connect
   useStartupReconciliation.ts   ← Local vs. live position recovery on load
   useBreakpoint.ts, usePWA.ts   ← UI/PWA utilities
 
-src/pages/
+apps/web/src/pages/
   Scanner.tsx, Harvest.tsx, Portfolio.tsx,
   Analytics.tsx, PairDetail.tsx, Settings.tsx
-
-src/types/
-  account.ts          ← WalletState, RegimeState (canonical)
-  harvest.ts           ← Engine config and action types
-  funding.ts, position.ts ← Rate and position data shapes
 ```
 
 ---

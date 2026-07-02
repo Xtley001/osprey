@@ -1,50 +1,16 @@
 {
-  "name": "osprey",
+  "name": "osprey-monorepo",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest run --config vitest.config.ts",
-    "test:watch": "vitest --config vitest.config.ts",
-    "test:coverage": "vitest run --config vitest.config.ts --coverage",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx"
-  },
-  "dependencies": {
-    "@tanstack/react-query": "^5.59.0",
-    "chart.js": "^4.4.4",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "ethers": "^6.13.3",
-    "lightweight-charts": "^4.2.0",
-    "lucide-react": "^0.454.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "zustand": "^5.0.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.12.0",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.0.1",
-    "@types/node": "^22.7.5",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.2",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^9.12.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "jsdom": "^26.0.0",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13",
-    "typescript": "^5.6.2",
-    "typescript-eslint": "^8.61.0",
-    "vite": "^5.4.8",
-    "vitest": "^2.1.2"
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspace=apps/web"
   }
 }

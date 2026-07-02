@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/osprey-icon.svg" width="80" height="80" alt="Osprey" />
+<img src="apps/web/public/osprey-icon.svg" width="80" height="80" alt="Osprey" />
 
 # Osprey
 
@@ -8,7 +8,7 @@
 
 [![Live](https://img.shields.io/badge/live-osprey.vercel.app-00d4aa?style=flat-square)](https://osprey-three.vercel.app/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-passing-22c55e?style=flat-square)](./engine-tests)
+[![Tests](https://img.shields.io/badge/tests-passing-22c55e?style=flat-square)](./packages/engine/test)
 [![License](https://img.shields.io/badge/license-MIT-f59e0b?style=flat-square)](./LICENSE)
 
 Osprey scans every Hyperliquid perpetual every minute, scores funding rate opportunities, and runs a portfolio of 20–100 **delta-neutral** positions simultaneously — collecting funding payments every hour with near-zero directional exposure.
@@ -119,23 +119,31 @@ v18 uses a 30-day rolling mean across the top 20 OI-weighted pairs to set the re
 
 ---
 
-## Architecture
+## Repo layout
+
+Osprey is an npm-workspaces monorepo. The funding-rate engine itself is a standalone package (`@osprey/engine`) — pure TypeScript, no React — consumed by the web app today and, per [docs/architecture/api-sdk.md](./docs/architecture/api-sdk.md), by a headless API server (`@osprey/server`) and a publishable client (`@osprey/sdk`) going forward.
 
 ```
-src/
+osprey/
+├── apps/
+│   └── web/                  ← the product: React/Vite app described in this README
+├── packages/
+│   ├── engine/                ← @osprey/engine — harvest/regime/portfolio/deltaHedge logic + HL API client
+│   ├── server/                 ← @osprey/server — REST/WebSocket API (in progress, see architecture doc)
+│   └── sdk/                     ← @osprey/sdk — typed TypeScript client (in progress)
+└── docs/architecture/api-sdk.md ← the design doc for server + sdk
+```
+
+### `apps/web` internals
+
+```
+apps/web/src/
 ├── engine/
-│   ├── harvest.ts        ← Core cycle: scan → enter → monitor → exit
-│   ├── portfolio.ts      ← Multi-pair sizing: OI caps, tier allocation
-│   ├── deltaHedge.ts     ← Spot hedge leg management and drift tracking
-│   ├── regime.ts         ← HOT/NEUTRAL/COLD market regime detection
-│   ├── signals.ts        ← Per-pair ENTER/WAIT/EXIT signal logic
-│   └── HarvestService.tsx← Mounts in AppShell, drives the harvest cycle
+│   └── HarvestService.tsx  ← Mounts in AppShell, drives the harvest cycle (calls into @osprey/engine)
 │
 ├── api/
-│   ├── hyperliquid.ts    ← HL REST API: rates, candles, account state, orders
-│   ├── fees.ts           ← Dynamic fee tier fetching and calculations
-│   ├── signing.ts        ← Unified signer: browser wallet / Agent Key / WalletConnect
-│   └── walletConnect.ts  ← WalletConnect v2 integration
+│   ├── signing.ts         ← Browser wallet / WalletConnect signing + agent-key encryption-at-rest
+│   └── walletConnect.ts   ← WalletConnect v2 integration
 │
 ├── store/
 │   ├── harvestStore.ts     ← Harvest engine state (config, log, action execution)
@@ -156,6 +164,8 @@ src/
     ├── PairDetail.tsx     ← Single-pair rate history and detail view
     └── Settings.tsx       ← Wallet, agent key, notifications, risk controls
 ```
+
+The core engine logic (`harvest.ts`, `portfolio.ts`, `deltaHedge.ts`, `regime.ts`, `signals.ts`) and the Hyperliquid API client (`hyperliquid.ts`, `fees.ts`) live in [`packages/engine/src/`](./packages/engine/src) — see [INTERNALS.md](./INTERNALS.md) for how they work.
 
 ---
 
@@ -228,9 +238,9 @@ The old threshold was 0.04%/hr — meaning Osprey only entered when rates were a
 ```bash
 git clone https://github.com/Xtley001/osprey.git
 cd osprey
-npm install
-cp .env.example .env
-npm run dev
+npm install               # installs all workspaces (apps/web + packages/*)
+cp apps/web/.env.example apps/web/.env
+npm run dev                # runs the web app (apps/web) — root scripts proxy to it
 ```
 
 Open `http://localhost:5173`. No API key required — Osprey reads public Hyperliquid endpoints.

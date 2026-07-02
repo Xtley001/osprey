@@ -1,5 +1,7 @@
 # Osprey — Setup Guide
 
+Osprey is an npm-workspaces monorepo (`apps/web` + `packages/engine`, `packages/server`, `packages/sdk` — see [README.md](./README.md#repo-layout)). This guide covers running the web app; `packages/server`/`packages/sdk` are documented in [docs/architecture/api-sdk.md](./docs/architecture/api-sdk.md).
+
 ## Prerequisites
 
 - Node.js 18+
@@ -11,9 +13,9 @@
 ```bash
 git clone https://github.com/Xtley001/osprey.git
 cd osprey
-npm install
-cp .env.example .env
-npm run dev
+npm install                          # installs all workspaces from the repo root
+cp apps/web/.env.example apps/web/.env
+npm run dev                          # root script proxies to apps/web
 ```
 
 Open `http://localhost:5173` — the Scanner (live funding rate heatmap) works immediately with no wallet or configuration, since it only reads public Hyperliquid data. Live trading requires wallet setup — see below.
@@ -22,7 +24,7 @@ Open `http://localhost:5173` — the Scanner (live funding rate heatmap) works i
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and configure:
+Copy `apps/web/.env.example` to `apps/web/.env` and configure:
 
 ```bash
 # Required — Hyperliquid endpoints (defaults point to mainnet)
@@ -121,14 +123,14 @@ Tests cover the core engine logic (funding math, rotation, regime detection, cir
 ## Building for production
 
 ```bash
-npm run build
-npm run preview   # preview the build locally
+npm run build                          # root script proxies to apps/web
+npm --workspace=apps/web run preview   # preview the build locally
 ```
 
-Deploy the `dist/` folder to Vercel, Cloudflare Pages, or any static host.
+Deploy the `apps/web/dist/` folder to Vercel, Cloudflare Pages, or any static host. `apps/web/vercel.json` is already configured for a Vercel deployment with this repo's root directory set to `apps/web`.
 
 ```bash
-# Vercel
+# Vercel (from apps/web/, or set "Root Directory" to apps/web in the Vercel dashboard)
 vercel deploy
 
 # Or: set up CI via .github/workflows/ci.yml (already configured)

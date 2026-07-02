@@ -1,29 +1,37 @@
 # Osprey — Testing Guide
 
+Tests are split across the monorepo's workspaces — `npm test` from the repo root runs all of them (`packages/engine`, `packages/server`, `packages/sdk`, `apps/web`).
+
 ## Test suite structure
 
 ```
-engine-tests/
+packages/engine/test/          ← pure engine logic — no React, no network
 ├── engine.test.ts          ← runHarvestCycle: regime gate, exits, entries, rotation signature, logging
 ├── signals.test.ts         ← computeSignal: ENTER/WAIT/AVOID gating, persistence counting
 ├── circuitBreaker.test.ts  ← Drawdown limiting: fires at threshold, blocks entries, allows exits
 ├── rotation.test.ts        ← shouldRotate cost/break-even math (round-trip fee fix)
 └── fundingMath.test.ts     ← Rate classification, formatting helpers (USD, rate, duration)
 
-store-tests/
+apps/web/store-tests/          ← Zustand orchestration — mocks @osprey/engine's HL API surface
 ├── harvestStore.test.ts    ← Toggle gating, config updates, mocked order placement, logging
 ├── reconciliation.test.ts  ← Startup position recovery (MATCH / ORPHAN-ON-HL / ORPHAN-LOCAL)
 └── phase6.test.ts          ← Spot hedge automation: entry/exit, emergency unwind
+
+packages/server/test/          ← Fastify route smoke tests (app.inject(), no real network)
+└── app.test.ts
+
+packages/sdk/test/             ← client request/response wiring, mocked fetch
+└── client.test.ts
 ```
 
-8 files, 100+ tests. Engine tests are pure logic (no React, no network). Store tests mock the Hyperliquid API layer (`vi.mock('../src/api/hyperliquid', ...)`) to verify orchestration without hitting the network.
+Engine and store tests are pure logic (no React, no network). Store tests mock the Hyperliquid API surface at the `@osprey/engine` module boundary (`vi.mock('@osprey/engine', async (importOriginal) => ({ ...(await importOriginal()), fetchAccountState: vi.fn(), ... }))`) — real engine logic (`runHarvestCycle`, `detectRegime`, etc.) passes through unmocked via `importOriginal`, only the network-touching HL API functions are replaced.
 
 ## Running tests
 
 ```bash
-npm run test             # run all tests once
-npm run test:watch       # watch mode
-npm run test:coverage    # coverage report
+npm test                                    # all workspaces, from repo root
+npm test --workspace=packages/engine        # just the engine
+npm run test:watch --workspace=apps/web     # watch mode, web app only
 ```
 
 ## Key test cases
@@ -114,6 +122,6 @@ test('COLD regime pauses entries', () => {
 ## Adding new tests
 
 When adding a new feature:
-1. Write pure-logic tests in `engine-tests/` (no network calls, no DOM, no React) or orchestration tests in `store-tests/` (mock the API layer with `vi.mock`)
-2. Use factory functions for fixtures (see `makePair()`, `makePosition()`, `makeHistory()` in `engine-tests/engine.test.ts`) rather than duplicating literal objects across tests
-3. Run `npm run test` before pushing
+1. Write pure-logic tests in `packages/engine/test/` (no network calls, no DOM, no React) or orchestration tests in `apps/web/store-tests/` (mock `@osprey/engine`'s HL API exports with `vi.mock` + `importOriginal`)
+2. Use factory functions for fixtures (see `makePair()`, `makePosition()`, `makeHistory()` in `packages/engine/test/engine.test.ts`) rather than duplicating literal objects across tests
+3. Run `npm test` from the repo root before pushing
