@@ -108,12 +108,33 @@ html, body, #root {
 select.input { cursor: pointer; }
 select.input option { background: var(--bg-overlay); }
 
+/* Accessibility — visible keyboard focus (audit P3).
+   Only shows on keyboard nav (:focus-visible), never on mouse click, so it
+   doesn't disturb the pointer-driven aesthetic. Inputs opt out of the default
+   outline via their own :focus styles; this restores it for keyboard users. */
+:focus-visible {
+  outline: 2px solid var(--hl-teal);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+a, button { -webkit-tap-highlight-color: transparent; }
+
 /* Animations */
 @keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @keyframes spin    { to { transform: rotate(360deg); } }
 @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .fade-in { animation: fadeIn 0.3s ease; }
 .spin    { animation: spin 1s linear infinite; }
+
+/* Respect reduced-motion preference — disable non-essential animation. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* ── Responsive grid helpers ─────────────────────────────────────────── */
 /* Use these classes on grid containers instead of hardcoded gridTemplateColumns */

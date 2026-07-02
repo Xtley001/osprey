@@ -16,6 +16,7 @@ import {
 } from '@osprey/engine';
 import { Sparkline } from '../components/shared/Sparkline';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { PageHeader } from '../components/ui';
 
 // Pre-launch removed from filter tabs (Phase 1)
 const CATEGORIES: Category[] = ['All', 'Crypto', 'TradFi', 'HIP-3'];
@@ -120,16 +121,11 @@ const Scanner: React.FC = () => {
 
   return (
     <div className="fade-in" style={{ paddingTop: 'var(--sp-4)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--sp-4)' }}>
-        <div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 4 }}>
-            Funding Scanner
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-            {pairsCount} pairs · HL pays every hour · click any column to sort
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Funding Scanner"
+        subtitle={`${pairsCount} pairs · HL pays every hour · click any column to sort`}
+        style={{ marginBottom: 'var(--sp-4)' }}
+      />
 
       {/* API error banner */}
       {apiError && (
@@ -220,6 +216,10 @@ const Scanner: React.FC = () => {
                 <tr
                   key={pair.symbol}
                   onClick={() => navigate(`/pair/${pair.symbol}`)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${pair.symbol} details`}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/pair/${pair.symbol}`); } }}
                   style={{ borderBottom: '1px solid var(--glass-border)', cursor: 'pointer', transition: 'background var(--t-fast)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

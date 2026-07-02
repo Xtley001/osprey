@@ -6,18 +6,14 @@ import { usePositionStore } from '../store/positionStore';
 import { formatUSD } from '@osprey/engine';
 import { toast } from '../components/shared/Toast';
 import { fetchAccountState } from '@osprey/engine';
-
-const WALLET_STORAGE_KEY = 'osprey_wallet_v1';
-
-function saveWalletSession(address: string) {
-  try { localStorage.setItem(WALLET_STORAGE_KEY, address); } catch (_e) { /* ignore */ }
-}
-function clearWalletSession() {
-  try { localStorage.removeItem(WALLET_STORAGE_KEY); } catch (_e) { /* ignore */ }
-}
-function getSavedWalletAddress(): string | null {
-  try { return localStorage.getItem(WALLET_STORAGE_KEY); } catch { return null; }
-}
+import {
+  connectBrowserWallet,
+  disconnectWallet,
+  saveWalletSession,
+  clearWalletSession,
+  getSavedWalletAddress,
+} from '../api/connect';
+import { PageHeader } from '../components/ui';
 
 // ── Risk limit row ─────────────────────────────────────────────────────────────
 const RiskLimitRow: React.FC<{
@@ -175,32 +171,9 @@ const Settings: React.FC = () => {
   }, [wallet.address, setWallet]);
 
   const connectWallet = async () => {
-    const eth = (window as Window & { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum;
-    if (!eth) {
-      toast.error('No browser wallet found. Install MetaMask or configure an Agent Key.');
-      return;
-    }
     setConnecting(true);
     try {
-      const accounts = await eth.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
-      if (!address) throw new Error('No account returned');
-      saveWalletSession(address);
-      setWallet({ address, connected: true, balance: 0 });
-      toast.info('Wallet connected · fetching Hyperliquid balance…');
-      fetchAccountState(address).then(state => {
-        if (state) {
-          setWallet({ balance: state.balance });
-          toast.success(state.balance > 0 ? `Balance: ${formatUSD(state.balance)}` : `Connected · No HL balance found`);
-        }
-      });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('rejected') || msg.includes('denied')) {
-        toast.warning('Wallet connection cancelled.');
-      } else {
-        toast.error(`Connection failed: ${msg}`);
-      }
+      await connectBrowserWallet();
     } finally {
       setConnecting(false);
     }
@@ -222,11 +195,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  const disconnect = () => {
-    clearWalletSession();
-    setWallet({ address: null, connected: false, balance: 0 });
-    toast.info('Wallet disconnected');
-  };
+  const disconnect = () => disconnectWallet();
 
   const handleExportTradeCSV = () => {
     if (trades.length === 0) { toast.warning('No trades to export yet.'); return; }
@@ -257,7 +226,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="fade-in" style={{ paddingTop: 'var(--sp-4)', maxWidth: 620, width: '100%' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 'var(--sp-5)' }}>Settings</h1>
+      <PageHeader title="Settings" />
 
       {/* Live mode banner */}
       <div style={{

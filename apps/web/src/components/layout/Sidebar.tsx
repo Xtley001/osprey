@@ -1,16 +1,11 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutGrid, BarChart2, Briefcase, Settings, Bird, Bot } from 'lucide-react';
+import { Bird } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { NAV_ITEMS } from './nav';
 
-const NAV = [
-  { to: '/',          icon: LayoutGrid, label: 'Scanner'   },
-  { to: '/harvest',   icon: Bot,        label: 'Harvest'   },
-  { to: '/portfolio', icon: Briefcase,  label: 'Portfolio' },
-  { to: '/analytics', icon: BarChart2,  label: 'Analytics' },
-  { to: '/settings',  icon: Settings,   label: 'Settings'  },
-];
+const NAV = NAV_ITEMS;
 
 interface SidebarProps {
   onPositionsClick?: () => void;
@@ -48,6 +43,8 @@ const WalletStatusBar: React.FC = () => {
 
 const Sidebar: React.FC<SidebarProps> = () => {
   const { isTablet } = useBreakpoint();
+  const navigate = useNavigate();
+  const connected = useAppStore(s => s.wallet.connected);
   const collapsed = isTablet;
 
   return (
@@ -98,12 +95,12 @@ const Sidebar: React.FC<SidebarProps> = () => {
       {collapsed ? (
         <div
           style={{ padding: '8px 4px', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
-          onClick={() => { window.location.href = '/settings'; }}
-          title="Wallet Settings"
+          onClick={() => navigate('/settings')}
+          title={connected ? 'Wallet connected · Settings' : 'Not connected · Settings'}
         >
           <div style={{
             width: 8, height: 8, borderRadius: '50%',
-            background: 'var(--accent-green)',
+            background: connected ? 'var(--accent-green)' : 'var(--text-muted)',
           }} />
         </div>
       ) : (

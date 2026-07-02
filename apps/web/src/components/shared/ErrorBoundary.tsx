@@ -32,16 +32,31 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <p style={{ color: '#7a7f96', fontSize: 13, maxWidth: 420, textAlign: 'center', lineHeight: 1.6 }}>
             {this.state.error?.message ?? 'Unknown error'}
           </p>
-          <button
-            onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/'; }}
-            style={{
-              background: '#43e8d8', color: '#0a0b0f', border: 'none',
-              borderRadius: 10, padding: '8px 20px', fontWeight: 700,
-              fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Reload App
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {/* Try again resets the boundary in place — keeps in-memory state
+                (positions, scanner data) instead of a full document reload. */}
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              style={{
+                background: '#43e8d8', color: '#0a0b0f', border: 'none',
+                borderRadius: 10, padding: '8px 20px', fontWeight: 700,
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: 'transparent', color: '#7a7f96',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 10, padding: '8px 20px', fontWeight: 600,
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Reload App
+            </button>
+          </div>
           <pre style={{
             background: '#0f1117', border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: 10, padding: '12px 16px', color: '#ff4f6e',

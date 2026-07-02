@@ -8,6 +8,7 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { HarvestConfig, HarvestLogEntry, HarvestState } from '@osprey/engine';
 import {
   DEFAULT_HARVEST_CONFIG,
@@ -129,7 +130,9 @@ interface HarvestStore extends HarvestState {
   clearLog:      () => void;
 }
 
-export const useHarvestStore = create<HarvestStore>((set, get) => ({
+export const useHarvestStore = create<HarvestStore>()(
+  persist(
+    (set, get) => ({
   config:          { ...DEFAULT_HARVEST_CONFIG },
   armed:           false,
   running:         false,
@@ -723,4 +726,19 @@ export const useHarvestStore = create<HarvestStore>((set, get) => ({
       set({ running: false });
     }
   },
-}));
+    }),
+    {
+      name:    'osprey-harvest-v1',
+      storage: createJSONStorage(() => localStorage),
+      // Persist config, activity log, and lifetime totals — but NEVER persist an
+      // enabled/armed/running engine. On reload the auto-trader always starts
+      // paused so it can't silently resume placing live orders (audit P0-5).
+      partialize: (s) => ({
+        config:          { ...s.config, enabled: false },
+        log:             s.log,
+        totalAutoEarned: s.totalAutoEarned,
+        totalAutoFees:   s.totalAutoFees,
+      }),
+    }
+  )
+);

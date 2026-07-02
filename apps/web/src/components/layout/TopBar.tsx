@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, RefreshCw, Wifi, WifiOff, Wallet } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useScannerStore } from '../../store/scannerStore';
 import { detectRegime } from '@osprey/engine';
@@ -8,6 +8,7 @@ import { formatRateRaw } from '@osprey/engine';
 import { NextFundingCountdown } from '../shared/FundingCountdown';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { ENABLE_TESTNET } from '@osprey/engine';
+import { connectBrowserWallet } from '../../api/connect';
 
 // Phase 0.3 / P0-11: surface active network so user always knows testnet vs mainnet.
 const NetworkBadge: React.FC = () => (
@@ -110,36 +111,52 @@ const ConnectionStatus: React.FC = () => {
   );
 };
 
-// Live connection indicator — always live, no mode toggle
-const LiveDot: React.FC = () => {
-  const wallet = useAppStore(s => s.wallet);
+// Wallet control — actually connects (audit P1-1). Connected → address+balance
+// chip that deep-links to Settings; disconnected → a real Connect button.
+const WalletButton: React.FC<{ compact?: boolean }> = ({ compact }) => {
+  const wallet   = useAppStore(s => s.wallet);
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
   const isConnected = wallet.connected && wallet.address;
 
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 6,
-      padding: '3px 10px', borderRadius: 'var(--r-md)',
-      border: `1px solid ${isConnected ? 'rgba(245,197,66,0.3)' : 'rgba(255,79,110,0.2)'}`,
-      background: isConnected ? 'rgba(245,197,66,0.08)' : 'rgba(255,79,110,0.06)',
-      fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 600,
-    }}>
-      <span style={{
-        width: 6, height: 6, borderRadius: '50%',
-        background: isConnected ? 'var(--accent-yellow)' : 'var(--accent-red)',
-        boxShadow: `0 0 5px ${isConnected ? 'var(--accent-yellow)' : 'var(--accent-red)'}`,
-        flexShrink: 0,
-      }} />
-      {isConnected ? (
-        <>
-          <span style={{ color: 'var(--accent-yellow)' }}>Live</span>
-          <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>
-            {wallet.address!.slice(0, 6)}…{wallet.address!.slice(-4)}
+  if (isConnected) {
+    return (
+      <button
+        onClick={() => navigate('/settings')}
+        title="Wallet settings"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '3px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+          border: '1px solid rgba(245,197,66,0.3)', background: 'rgba(245,197,66,0.08)',
+          fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 600,
+        }}
+      >
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-yellow)',
+          boxShadow: '0 0 5px var(--accent-yellow)', flexShrink: 0,
+        }} />
+        <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>
+          {wallet.address!.slice(0, 6)}…{wallet.address!.slice(-4)}
+        </span>
+        {!compact && wallet.balance > 0 && (
+          <span style={{ color: 'var(--accent-yellow)', fontFamily: 'var(--font-mono)' }}>
+            ${wallet.balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </span>
-        </>
-      ) : (
-        <span style={{ color: 'var(--accent-red)' }}>Not Connected</span>
-      )}
-    </div>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      className="btn btn-primary"
+      style={{ padding: '4px 12px', gap: 6, fontSize: 12, background: 'var(--accent-yellow)', color: '#0a0b0f', opacity: busy ? 0.7 : 1 }}
+      disabled={busy}
+      onClick={async () => { setBusy(true); try { await connectBrowserWallet(); } finally { setBusy(false); } }}
+    >
+      <Wallet size={13} />
+      {busy ? 'Connecting…' : compact ? 'Connect' : 'Connect Wallet'}
+    </button>
   );
 };
 
@@ -151,6 +168,7 @@ interface TopBarProps {
 const TopBar: React.FC<TopBarProps> = () => {
   const [spinning, setSpinning] = useState(false);
   const navigate  = useNavigate();
+  const location  = useLocation();
   const setSearch = useScannerStore(s => s.setSearch);
   const { isMobile, isTablet } = useBreakpoint();
 
@@ -172,9 +190,9 @@ const TopBar: React.FC<TopBarProps> = () => {
 
   return (
     <header style={{
-      height: isMobile ? 48 : 52,
-      display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12,
-      padding: isMobile ? '0 12px' : '0 var(--sp-4)',
+      minHeight: isMobile ? 48 : 52,
+      display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, flexWrap: 'wrap',
+      padding: isMobile ? '6px 12px' : '0 var(--sp-4)',
       borderBottom: '1px solid var(--glass-border)',
       background: 'var(--bg-surface)', flexShrink: 0,
     }}>
@@ -183,7 +201,12 @@ const TopBar: React.FC<TopBarProps> = () => {
         <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
         <input
           className="input"
-          onChange={e => { setSearch(e.target.value); if (e.target.value) navigate('/'); }}
+          onChange={e => {
+            setSearch(e.target.value);
+            // Only jump to the Scanner from a page that can't show results —
+            // don't yank the user mid-keystroke if they're already there (audit P1-5).
+            if (e.target.value && location.pathname !== '/') navigate('/');
+          }}
           placeholder="Search pair…"
           style={{ paddingLeft: 28, height: 32 }}
         />
@@ -193,19 +216,21 @@ const TopBar: React.FC<TopBarProps> = () => {
       {!isMobile && <NetworkBadge />}
       {!isMobile && !isTablet && <NextFundingCountdown />}
 
-      <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         {isMobile && <RegimeBadge compact />}
         {!isMobile && <ConnectionStatus />}
-        {!isMobile && !isTablet && <LiveDot />}
+        <WalletButton compact={isTablet || isMobile} />
 
         <button
           className="btn btn-ghost"
-          style={{ padding: '4px 10px', gap: 5, fontSize: 12 }}
+          style={{ padding: '4px 10px', gap: 5, fontSize: 12, flexShrink: 0 }}
           onClick={handleRefresh}
           disabled={spinning}
+          aria-label="Refresh rates"
+          title="Refresh rates"
         >
           <RefreshCw size={13} className={spinning ? 'spin' : ''} />
-          {!isMobile && 'Refresh'}
+          {!isMobile && !isTablet && 'Refresh'}
         </button>
       </div>
     </header>

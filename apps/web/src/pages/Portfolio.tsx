@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { usePositionStore } from '../store/positionStore';
 import { useEquityCurveStore } from '../store/equityCurveStore';
 import { formatUSD, formatRateRaw, formatDuration, formatPct } from '@osprey/engine';
-import { AlertTriangle, RefreshCw, TrendingUp, ExternalLink } from 'lucide-react';
+import { AlertTriangle, TrendingUp, ExternalLink } from 'lucide-react';
 import { toast } from '../components/shared/Toast';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { Card, Stat, Button, Badge, PageHeader } from '../components/ui';
 
 // ── Equity curve chart ────────────────────────────────────────────────────────
 const EquityCurveChart: React.FC = () => {
@@ -79,6 +80,7 @@ const Portfolio: React.FC = () => {
   const clearAll   = usePositionStore(s => s.clearAll);
 
   const [confirmClose, setConfirmClose] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
   const { isMobile } = useBreakpoint();
 
   const openFunding   = positions.reduce((s, p) => s + p.fundingEarned, 0);
@@ -134,75 +136,68 @@ const Portfolio: React.FC = () => {
 
   return (
     <div className="fade-in" style={{ paddingTop: 'var(--sp-4)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-5)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 }}>Portfolio</h1>
-          <span style={{
-            fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-sm)', fontWeight: 700,
-            background: 'rgba(245,197,66,0.12)', color: 'var(--accent-yellow)',
-            border: '1px solid rgba(245,197,66,0.25)',
-          }}>
-            LIVE
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <PageHeader
+        title="Portfolio"
+        badge={<Badge tone="yellow" style={{ fontSize: 11, padding: '2px 8px' }}>LIVE</Badge>}
+        actions={<>
           {trades.length > 0 && (
-            <button className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 12px' }} onClick={exportCSV}>
-              <ExternalLink size={13} /> Export CSV
-            </button>
+            <Button onClick={exportCSV}><ExternalLink size={13} /> Export CSV</Button>
           )}
           {(positions.length > 0 || trades.length > 0) && (
-            <button className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 12px', color: 'var(--accent-red)' }} onClick={() => {
-              clearAll();
-              toast.info('Portfolio cleared');
-            }}>
-              Clear All
-            </button>
+            confirmClearAll ? (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Clear all positions & trades?</span>
+                <Button variant="danger" onClick={() => {
+                  clearAll();
+                  setConfirmClearAll(false);
+                  toast.info('Portfolio cleared');
+                }}>
+                  Confirm
+                </Button>
+                <Button onClick={() => setConfirmClearAll(false)}>Cancel</Button>
+              </div>
+            ) : (
+              <Button style={{ color: 'var(--accent-red)' }} onClick={() => setConfirmClearAll(true)}>
+                Clear All
+              </Button>
+            )
           )}
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Equity curve (Phase 2) */}
       <EquityCurveChart />
 
       {/* Summary cards */}
       <div className="grid-stats" style={{ marginBottom: 'var(--sp-5)' }}>
-        {[
-          { label: 'Total Funding',   value: '+' + formatUSD(totalFunding),  color: 'var(--accent-green)' },
-          { label: 'Total Fees',      value: '−' + formatUSD(totalFees),     color: 'var(--accent-red)' },
-          { label: 'Net Profit',      value: (netProfit >= 0 ? '+' : '') + formatUSD(netProfit), color: netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
-          { label: 'Win Rate',        value: trades.length > 0 ? formatPct(winRate) : '—', color: 'var(--text-primary)' },
-          {
-            label: 'Fee Efficiency',
-            value: feeEfficiency > 0 ? `${feeEfficiency.toFixed(1)}×` : '—',
-            color: feeEfficiency >= 10 ? 'var(--accent-green)' : feeEfficiency >= 3 ? 'var(--accent-yellow)' : 'var(--accent-red)',
-            sub: 'funding ÷ total fees',
-          },
-        ].map(s => (
-          <div key={s.label} className="glass-card" style={{ padding: 'var(--sp-4)' }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>{s.label}</p>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 600, color: s.color }}>{s.value}</p>
-            {'sub' in s && s.sub && <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>{s.sub}</p>}
-          </div>
-        ))}
+        <Stat label="Total Funding" value={'+' + formatUSD(totalFunding)} color="var(--accent-green)" />
+        <Stat label="Total Fees"    value={'−' + formatUSD(totalFees)}    color="var(--accent-red)" />
+        <Stat label="Net Profit"    value={(netProfit >= 0 ? '+' : '') + formatUSD(netProfit)} color={netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'} />
+        <Stat label="Win Rate"      value={trades.length > 0 ? formatPct(winRate) : '—'} />
+        <Stat
+          label="Fee Efficiency"
+          value={feeEfficiency > 0 ? `${feeEfficiency.toFixed(1)}×` : '—'}
+          color={feeEfficiency >= 10 ? 'var(--accent-green)' : feeEfficiency >= 3 ? 'var(--accent-yellow)' : 'var(--accent-red)'}
+          sub="funding ÷ total fees"
+        />
       </div>
 
       {/* Best/worst pair this month */}
       {sortedPairs.length > 0 && (
         <div style={{ display: 'flex', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)', flexWrap: 'wrap' }}>
           {bestPair && (
-            <div className="glass-card" style={{ padding: 'var(--sp-3) var(--sp-4)', flex: 1, minWidth: 160 }}>
+            <Card pad="sm" style={{ flex: 1, minWidth: 160 }}>
               <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Best (this month)</p>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>{bestPair[0]}</p>
               <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent-green)' }}>+{formatUSD(bestPair[1])}</p>
-            </div>
+            </Card>
           )}
           {worstPair && worstPair[0] !== bestPair?.[0] && (
-            <div className="glass-card" style={{ padding: 'var(--sp-3) var(--sp-4)', flex: 1, minWidth: 160 }}>
+            <Card pad="sm" style={{ flex: 1, minWidth: 160 }}>
               <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Worst (this month)</p>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>{worstPair[0]}</p>
               <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent-red)' }}>{formatUSD(worstPair[1])}</p>
-            </div>
+            </Card>
           )}
         </div>
       )}
@@ -274,14 +269,9 @@ const Portfolio: React.FC = () => {
                           <button className="btn btn-ghost" style={{ padding: '2px 6px', fontSize: 10 }} onClick={() => setConfirmClose(null)}>Cancel</button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: 10 }}>
-                            <RefreshCw size={10} />
-                          </button>
-                          <button className="btn btn-danger" style={{ padding: '2px 8px', fontSize: 10 }} onClick={() => setConfirmClose(p.id)}>
-                            Close
-                          </button>
-                        </div>
+                        <button className="btn btn-danger" style={{ padding: '2px 8px', fontSize: 10 }} onClick={() => setConfirmClose(p.id)}>
+                          Close
+                        </button>
                       )}
                     </td>
                   </tr>

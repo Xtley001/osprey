@@ -14,6 +14,7 @@ import {
 import { useFeeStore } from '../store/feeStore';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Activity, Zap, BarChart2 } from 'lucide-react';
 import { useScannerStore } from '../store/scannerStore';
@@ -127,28 +128,28 @@ const PairDetail: React.FC = () => {
   const [showEntry, setShowEntry] = useState(false);
   const { isMobile } = useBreakpoint();
 
-  const [history,   setHistory]   = useState<FundingEvent[]>([]);
-  const [candles,   setCandles]   = useState<Candle[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
+  // Audit P0-3: cached via TanStack Query so navigating back to a pair is
+  // instant (served from cache) instead of flashing "Loading…" on every mount.
+  const detailQuery = useQuery({
+    queryKey: ['pair-detail', symbol],
+    enabled:  !!symbol,
+    staleTime: 60_000,        // funding history + candles are hourly — 60s is plenty
+    queryFn: async () => {
+      const [h, c] = await Promise.all([
+        fetchFundingHistory(symbol!),
+        fetchCandles(symbol!),
+      ]);
+      return { history: h, candles: c };
+    },
+  });
 
-  useEffect(() => {
-    if (!symbol) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDataError(null);
-
-    Promise.all([
-      fetchFundingHistory(symbol),
-      fetchCandles(symbol),
-    ])
-      .then(([h, c]) => { setHistory(h); setCandles(c); setLoading(false); })
-      .catch((e: unknown) => {
-        setDataError(e instanceof Error ? e.message : String(e));
-        setLoading(false);
-      });
-  }, [symbol]);
+  const history   = detailQuery.data?.history ?? [];
+  const candles   = detailQuery.data?.candles ?? [];
+  // Only show the loading state on the very first fetch (no cached data yet).
+  const loading   = detailQuery.isLoading;
+  const dataError = detailQuery.error
+    ? (detailQuery.error instanceof Error ? detailQuery.error.message : String(detailQuery.error))
+    : null;
 
   const currentRate  = pair?.currentRate ?? 0;
   const sparkline7d  = pair?.sparkline7d ?? [];

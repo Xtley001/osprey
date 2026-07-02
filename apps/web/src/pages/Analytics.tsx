@@ -12,6 +12,7 @@ import { useEquityCurveStore } from '../store/equityCurveStore';
 import { formatUSD, formatRateRaw, formatPct } from '@osprey/engine';
 import { Sparkline } from '../components/shared/Sparkline';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { Card, Stat, SectionLabel, PageHeader } from '../components/ui';
 
 const Analytics: React.FC = () => {
   const navigate  = useNavigate();
@@ -73,7 +74,7 @@ const Analytics: React.FC = () => {
   allPairs.forEach(p => { heatCounts[p.heat]++; });
 
   const RegimeCard = (
-    <div className="glass-card" style={{ padding: 'var(--sp-4)' }}>
+    <Card pad="md">
       <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--sp-3)' }}>Current Regime</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--sp-3)' }}>
         <span style={{ fontSize: 22 }}>{regime.label === 'HOT' ? '🔥' : regime.label === 'NEUTRAL' ? '🌤' : '🧊'}</span>
@@ -90,35 +91,23 @@ const Analytics: React.FC = () => {
           <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{Math.round(regime.breadth * 100)}% elevated</p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 
   return (
     <div className="fade-in" style={{ paddingTop: 'var(--sp-4)' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 'var(--sp-5)' }}>
-        Analytics
-      </h1>
+      <PageHeader title="Analytics" />
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: 'var(--sp-4)', marginBottom: 'var(--sp-5)' }}>
         {/* ── Section 1: Strategy Health ─────────────────────────────────── */}
         <div>
-          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--sp-3)' }}>
-            Strategy Health
-          </p>
+          <SectionLabel>Strategy Health</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)' }}>
-            {[
-              { label: 'Cumulative Net P&L', value: (netProfit >= 0 ? '+' : '') + formatUSD(netProfit), color: netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
-              { label: 'Rolling 7d Sharpe', value: sharpe7d !== null ? sharpe7d.toFixed(2) : '—', color: sharpe7d !== null && sharpe7d > 1 ? 'var(--accent-green)' : 'var(--text-muted)', sub: sharpe7d === null ? 'Need 7d data' : undefined },
-              { label: 'Fee Efficiency', value: feeEfficiency > 0 ? `${feeEfficiency.toFixed(1)}×` : '—', color: feeEfficiency >= 10 ? 'var(--accent-green)' : feeEfficiency >= 3 ? 'var(--accent-yellow)' : 'var(--text-muted)', sub: 'funding ÷ fees' },
-              { label: 'Drawdown from HWM', value: hwm > 0 ? formatPct(-drawdownPct) : '—', color: drawdownPct > 10 ? 'var(--accent-red)' : 'var(--text-muted)' },
-              { label: 'Win Rate', value: trades.length > 0 ? formatPct(winRate) : '—', color: winRate > 60 ? 'var(--accent-green)' : winRate > 40 ? 'var(--accent-yellow)' : 'var(--accent-red)' },
-            ].map(s => (
-              <div key={s.label} className="glass-card" style={{ padding: 'var(--sp-3) var(--sp-4)' }}>
-                <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>{s.label}</p>
-                <p style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: s.color }}>{s.value}</p>
-                {'sub' in s && s.sub && <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{s.sub}</p>}
-              </div>
-            ))}
+            <Stat size={15} label="Cumulative Net P&L" value={(netProfit >= 0 ? '+' : '') + formatUSD(netProfit)} color={netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'} />
+            <Stat size={15} label="Rolling 7d Sharpe" value={sharpe7d !== null ? sharpe7d.toFixed(2) : '—'} color={sharpe7d !== null && sharpe7d > 1 ? 'var(--accent-green)' : 'var(--text-muted)'} sub={sharpe7d === null ? 'Need 7d data' : undefined} />
+            <Stat size={15} label="Fee Efficiency" value={feeEfficiency > 0 ? `${feeEfficiency.toFixed(1)}×` : '—'} color={feeEfficiency >= 10 ? 'var(--accent-green)' : feeEfficiency >= 3 ? 'var(--accent-yellow)' : 'var(--text-muted)'} sub="funding ÷ fees" />
+            <Stat size={15} label="Drawdown from HWM" value={hwm > 0 ? formatPct(-drawdownPct) : '—'} color={drawdownPct > 10 ? 'var(--accent-red)' : 'var(--text-muted)'} />
+            <Stat size={15} label="Win Rate" value={trades.length > 0 ? formatPct(winRate) : '—'} color={winRate > 60 ? 'var(--accent-green)' : winRate > 40 ? 'var(--accent-yellow)' : 'var(--accent-red)'} />
           </div>
         </div>
 
@@ -152,9 +141,7 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* ── Section 2: Pair Performance ──────────────────────────────────────── */}
-      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--sp-3)' }}>
-        Pair Performance (All Trades)
-      </p>
+      <SectionLabel>Pair Performance (All Trades)</SectionLabel>
       {perfList.length === 0 ? (
         <div className="glass-card" style={{ padding: 'var(--sp-5)', textAlign: 'center', color: 'var(--text-muted)', marginBottom: 'var(--sp-5)' }}>
           No closed trades yet. Trade history appears here after positions are closed.
@@ -200,9 +187,7 @@ const Analytics: React.FC = () => {
       )}
 
       {/* ── Section 3: Persistence Leaders ───────────────────────────────────── */}
-      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-        Persistence Leaders
-      </p>
+      <SectionLabel style={{ marginBottom: 4 }}>Persistence Leaders</SectionLabel>
       <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 'var(--sp-3)' }}>
         Pairs above entry threshold for the longest consecutive time — highest conviction entries.
       </p>

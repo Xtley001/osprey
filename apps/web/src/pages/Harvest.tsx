@@ -15,6 +15,7 @@ import { NextFundingCountdown } from '../components/shared/FundingCountdown';
 import ArmEngineModal from '../components/shared/ArmEngineModal';
 import { Zap, ZapOff, Trash2, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { Stat } from '../components/ui';
 
 // ── Config slider+input row ───────────────────────────────────────────────────
 const ConfigRow: React.FC<{
@@ -309,12 +310,10 @@ const ConfigPanel: React.FC<{ config: HarvestConfig; update: (d: Partial<Harvest
 );
 
 // ── Stat card (shared between status bar and page) ───────────────────────────
+// Thin adapter over the shared <Stat> primitive so the harvest call sites keep
+// their `valueColor` prop name while routing through the design system.
 const StatCard: React.FC<{ label: string; value: string; valueColor?: string; sub?: string }> = ({ label, value, valueColor, sub }) => (
-  <div className="glass-card" style={{ padding: 'var(--sp-3) var(--sp-4)' }}>
-    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</p>
-    <p style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: valueColor ?? 'var(--text-primary)' }}>{value}</p>
-    {sub && <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</p>}
-  </div>
+  <Stat label={label} value={value} color={valueColor} sub={sub} size={14} pad="sm" />
 );
 
 // ── Status bar ────────────────────────────────────────────────────────────────

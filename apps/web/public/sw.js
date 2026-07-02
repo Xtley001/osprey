@@ -2,7 +2,7 @@
 // Strategy: network-first for all requests, cache as fallback for app shell only.
 // We do NOT cache API responses or user data — only the static app shell.
 
-const CACHE_VERSION = 'osprey-v2';
+const CACHE_VERSION = 'osprey-v3';
 
 // Only these paths are cached for offline fallback
 const APP_SHELL = [
@@ -21,11 +21,18 @@ const NO_CACHE_ORIGINS = [
 ];
 
 self.addEventListener('install', (e) => {
+  // Do NOT call skipWaiting() here. A new SW must wait until the app explicitly
+  // opts in (via the SKIP_WAITING message below) so we never swap assets out
+  // from under an open tab mid-session — the old cause of blank pages that
+  // needed a manual reload (audit P0-4).
   e.waitUntil(
-    caches.open(CACHE_VERSION)
-      .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL))
   );
+});
+
+// The page sends this when the user clicks "Refresh" on the update prompt.
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
@@ -67,8 +74,9 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // For static assets (JS, CSS, fonts, images): cache-first
-  // These are content-hashed by Vite so cache invalidation is automatic
+  // For static assets (JS, CSS, fonts, images): stale-while-revalidate.
+  // Serve cache instantly for speed, but always refetch in the background so a
+  // stale content-hashed bundle can't linger and force a manual reload.
   if (
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.svg') ||
@@ -77,12 +85,14 @@ self.addEventListener('fetch', (e) => {
   ) {
     e.respondWith(
       caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(e.request, clone));
+        const network = fetch(e.request).then(res => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then(c => c.put(e.request, clone));
+          }
           return res;
-        });
+        }).catch(() => cached);
+        return cached || network;
       })
     );
     return;
