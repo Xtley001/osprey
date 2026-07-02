@@ -34,7 +34,7 @@ Osprey automates the entire workflow at portfolio scale:
 | **Entry Signals** | ENTER / WAIT / EXIT per pair based on rate persistence and regime |
 | **Live Mode** | Real orders via browser wallet or Agent Key — no MetaMask required |
 
-> Osprey previously shipped a backtester and a paper-trading demo mode. Both were deliberately removed in a Phase 1 remediation pass (see [`docs/internal/UPDATE_AUDIT.md`](./docs/internal/UPDATE_AUDIT.md)) to keep the engine focused on live execution correctness rather than simulation surface.
+> Osprey previously shipped a backtester and a paper-trading demo mode. Both were deliberately removed to keep the engine focused on live execution correctness rather than simulation surface.
 
 ---
 
