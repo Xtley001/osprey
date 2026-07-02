@@ -121,7 +121,8 @@ const PairDetail: React.FC = () => {
   const navigate   = useNavigate();
   const pair       = useScannerStore(s => s.pairs.find(p => p.symbol === symbol));
   const wallet     = useAppStore(s => s.wallet);
-  const pairTrades = usePositionStore(s => s.trades.filter(t => t.symbol === symbol));
+  const trades     = usePositionStore(s => s.trades);
+  const pairTrades = useMemo(() => trades.filter(t => t.symbol === symbol), [trades, symbol]);
   const liveFees   = useFeeStore(s => s.fees);
   const [showEntry, setShowEntry] = useState(false);
   const { isMobile } = useBreakpoint();
