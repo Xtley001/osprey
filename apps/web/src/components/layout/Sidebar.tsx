@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { Bird } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
@@ -18,7 +18,7 @@ const WalletStatusBar: React.FC = () => {
 
   return (
     <div
-      onClick={() => navigate('/settings')}
+      onClick={() => navigate('/app/settings')}
       style={{
         padding: 'var(--sp-3) var(--sp-4)',
         borderTop: '1px solid var(--glass-border)',
@@ -58,21 +58,21 @@ const Sidebar: React.FC<SidebarProps> = () => {
       transition: 'width 0.2s ease',
       overflow: 'hidden',
     }}>
-      {/* Logo */}
-      <div style={{ padding: collapsed ? '0 0 20px' : '0 var(--sp-4) var(--sp-6)', display: 'flex', alignItems: 'center', gap: 8, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-        <Bird size={22} color="var(--hl-teal)" />
+      {/* Logo — links back to the landing page */}
+      <Link to="/" title="Osprey home" style={{ textDecoration: 'none', padding: collapsed ? '0 0 20px' : '0 var(--sp-4) var(--sp-6)', display: 'flex', alignItems: 'center', gap: 8, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+        <Bird size={22} color="var(--accent)" />
         {!collapsed && (
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--hl-teal)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--w-000)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             OSPREY
           </span>
         )}
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: collapsed ? '0 4px' : '0 var(--sp-2)' }}>
         {NAV.map(({ to, icon: Icon, label }) => (
           <NavLink
-            key={to} to={to} end={to === '/'}
+            key={to} to={to} end={to === '/app'}
             title={collapsed ? label : undefined}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 'var(--sp-3)',
@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
       {collapsed ? (
         <div
           style={{ padding: '8px 4px', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate('/app/settings')}
           title={connected ? 'Wallet connected · Settings' : 'Not connected · Settings'}
         >
           <div style={{

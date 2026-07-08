@@ -20,11 +20,11 @@ export interface StatProps {
  */
 export const Stat: React.FC<StatProps> = ({ label, value, color, sub, size = 16, pad = 'md', style }) => (
   <Card pad={pad} style={style}>
-    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>{label}</p>
-    <p style={{ fontFamily: 'var(--font-mono)', fontSize: size, fontWeight: 600, color: color ?? 'var(--text-primary)' }}>
+    <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--w-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{label}</p>
+    <p style={{ fontFamily: 'var(--font-mono)', fontSize: size, fontWeight: 600, letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums', color: color ?? 'var(--w-000)' }}>
       {value}
     </p>
-    {sub && <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>{sub}</p>}
+    {sub && <p style={{ fontSize: 9, color: 'var(--w-300)', marginTop: 3 }}>{sub}</p>}
   </Card>
 );
 

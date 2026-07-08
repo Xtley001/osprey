@@ -63,9 +63,9 @@ const EquityCurveChart: React.FC = () => {
   }
 
   return (
-    <div className="glass-card" style={{ padding: 'var(--sp-4)', marginBottom: 'var(--sp-4)' }}>
-      <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--sp-3)' }}>
-        Cumulative Net Funding (Live)
+    <div className="glass-card hero-card" style={{ padding: 'var(--sp-5)', marginBottom: 'var(--sp-4)', background: 'var(--grad-ambient)' }}>
+      <p className="label" style={{ marginBottom: 'var(--sp-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="live-dot" /> Cumulative Net Funding (Live)
       </p>
       <canvas ref={ref} style={{ width: '100%', height: 120, display: 'block' }} />
     </div>
@@ -218,7 +218,7 @@ const Portfolio: React.FC = () => {
       {positions.length === 0 ? (
         <div className="glass-card" style={{ padding: 'var(--sp-8)', textAlign: 'center', color: 'var(--text-muted)', marginBottom: 'var(--sp-5)' }}>
           <p style={{ marginBottom: 8 }}>No open positions.</p>
-          <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => navigate('/')}>
+          <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => navigate('/app')}>
             Go to Scanner →
           </button>
         </div>
@@ -238,7 +238,7 @@ const Portfolio: React.FC = () => {
                 return (
                   <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                     <td style={{ padding: '9px 12px', fontWeight: 600, fontSize: 13 }}>
-                      <button onClick={() => navigate(`/pair/${p.symbol}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, fontFamily: 'var(--font-display)', padding: 0 }}>
+                      <button onClick={() => navigate(`/app/pair/${p.symbol}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, fontFamily: 'var(--font-display)', padding: 0 }}>
                         {p.symbol}
                       </button>
                     </td>

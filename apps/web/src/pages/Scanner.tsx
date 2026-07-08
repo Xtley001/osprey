@@ -16,7 +16,7 @@ import {
 } from '@osprey/engine';
 import { Sparkline } from '../components/shared/Sparkline';
 import { useBreakpoint } from '../hooks/useBreakpoint';
-import { PageHeader } from '../components/ui';
+import { PageHeader, Segmented, SkeletonRows, ErrorBanner } from '../components/ui';
 
 // Pre-launch removed from filter tabs (Phase 1)
 const CATEGORIES: Category[] = ['All', 'Crypto', 'TradFi', 'HIP-3'];
@@ -129,56 +129,36 @@ const Scanner: React.FC = () => {
 
       {/* API error banner */}
       {apiError && (
-        <div style={{
-          background: 'rgba(255,79,110,0.1)', border: '1px solid rgba(255,79,110,0.3)',
-          borderRadius: 'var(--r-md)', padding: '10px 14px', marginBottom: 'var(--sp-3)',
-          display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12,
-        }}>
-          <span style={{ color: 'var(--accent-red)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>⚠</span>
-          <div style={{ flex: 1 }}>
-            <span style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Hyperliquid API error — </span>
-            <span style={{ color: 'var(--text-secondary)' }}>{apiError}</span>
-            {allPairs.length > 0 && (
-              <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>Showing last successful data.</span>
-            )}
-          </div>
-          <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 10px', flexShrink: 0 }}
-            onClick={() => { clearError(); useScannerStore.getState().fetchRates(); }}>
-            Retry
-          </button>
-          <button onClick={clearError} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: 0, flexShrink: 0 }}>×</button>
-        </div>
+        <ErrorBanner
+          title="Hyperliquid API error"
+          message={apiError}
+          note={allPairs.length > 0 ? 'Showing last successful data.' : undefined}
+          onRetry={() => { clearError(); useScannerStore.getState().fetchRates(); }}
+          onDismiss={clearError}
+        />
       )}
 
       {/* Category filters */}
-      <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)', flexWrap: 'wrap', alignItems: 'center' }}>
-        {CATEGORIES.map(cat => {
-          const count = categoryCounts[cat] ?? 0;
-          const isActive = filter === cat;
-          if (cat !== 'All' && count === 0 && allPairs.length > 0) return null;
-          return (
-            <button key={cat} onClick={() => setFilter(cat)} style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 10px', borderRadius: 'var(--r-md)',
-              border: `1px solid ${isActive ? 'var(--hl-teal)' : 'var(--glass-border)'}`,
-              background: isActive ? 'var(--hl-teal-dim)' : 'transparent',
-              color: isActive ? 'var(--hl-teal)' : 'var(--text-secondary)',
-              cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 500,
-              transition: 'all var(--t-fast)',
-            }}>
-              {cat}
-              {allPairs.length > 0 && (
-                <span style={{
-                  background: isActive ? 'rgba(67,232,216,0.2)' : 'var(--bg-elevated)',
-                  color: isActive ? 'var(--hl-teal)' : 'var(--text-muted)',
-                  borderRadius: 10, padding: '0px 5px', fontSize: 10,
-                  fontFamily: 'var(--font-mono)', fontWeight: 600, minWidth: 18, textAlign: 'center',
-                }}>{count}</span>
-              )}
-            </button>
-          );
-        })}
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', gap: 'var(--sp-3)', marginBottom: 'var(--sp-3)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <Segmented
+          aria-label="Filter by category"
+          value={filter}
+          onChange={setFilter}
+          options={CATEGORIES
+            .filter(cat => cat === 'All' || (categoryCounts[cat] ?? 0) > 0 || allPairs.length === 0)
+            .map(cat => ({
+              value: cat,
+              label: (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {cat}
+                  {allPairs.length > 0 && (
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--w-300)' }}>{categoryCounts[cat] ?? 0}</span>
+                  )}
+                </span>
+              ),
+            }))}
+        />
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--w-300)' }}>
           {displayPairs.length} shown
         </span>
       </div>
@@ -203,9 +183,7 @@ const Scanner: React.FC = () => {
           </thead>
           <tbody>
             {isLoading && displayPairs.length === 0 ? (
-              <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-                Loading rates…
-              </td></tr>
+              <SkeletonRows rows={12} cols={11} />
             ) : displayPairs.length === 0 ? (
               <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                 No pairs match this filter.
@@ -215,11 +193,11 @@ const Scanner: React.FC = () => {
               return (
                 <tr
                   key={pair.symbol}
-                  onClick={() => navigate(`/pair/${pair.symbol}`)}
+                  onClick={() => navigate(`/app/pair/${pair.symbol}`)}
                   role="button"
                   tabIndex={0}
                   aria-label={`View ${pair.symbol} details`}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/pair/${pair.symbol}`); } }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/app/pair/${pair.symbol}`); } }}
                   style={{ borderBottom: '1px solid var(--glass-border)', cursor: 'pointer', transition: 'background var(--t-fast)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

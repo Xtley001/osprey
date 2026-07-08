@@ -101,11 +101,11 @@ const ConnectionStatus: React.FC = () => {
   const isStale = ageMs > 120_000;
 
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10,
+    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10,
       color: isStale ? 'var(--accent-yellow)' : 'var(--accent-green)',
       fontFamily: 'var(--font-mono)',
     }}>
-      <Wifi size={10} />
+      {isStale ? <Wifi size={10} /> : <span className="live-dot" style={{ background: 'var(--accent-green)', width: 6, height: 6 }} />}
       {isStale ? `Stale ${ageMin}m ago` : 'Live'}
     </span>
   );
@@ -122,7 +122,7 @@ const WalletButton: React.FC<{ compact?: boolean }> = ({ compact }) => {
   if (isConnected) {
     return (
       <button
-        onClick={() => navigate('/settings')}
+        onClick={() => navigate('/app/settings')}
         title="Wallet settings"
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
@@ -205,7 +205,7 @@ const TopBar: React.FC<TopBarProps> = () => {
             setSearch(e.target.value);
             // Only jump to the Scanner from a page that can't show results —
             // don't yank the user mid-keystroke if they're already there (audit P1-5).
-            if (e.target.value && location.pathname !== '/') navigate('/');
+            if (e.target.value && location.pathname !== '/app') navigate('/app');
           }}
           placeholder="Search pair…"
           style={{ paddingLeft: 28, height: 32 }}

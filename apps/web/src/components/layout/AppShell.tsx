@@ -22,7 +22,7 @@ const MobileNav: React.FC = () => (
       <NavLink
         key={to}
         to={to}
-        end={to === '/'}
+        end={to === '/app'}
         style={({ isActive }) => ({
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           color: isActive ? 'var(--hl-teal)' : 'var(--text-muted)',

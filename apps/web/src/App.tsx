@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppShell from './components/layout/AppShell';
+import Landing from './pages/Landing';
 import Scanner from './pages/Scanner';
 import PairDetail from './pages/PairDetail';
 import Portfolio from './pages/Portfolio';
@@ -40,13 +41,17 @@ const App: React.FC = () => (
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<AppShell />}>
+        {/* Marketing zone — public, no app shell */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/docs" element={<Developers />} />
+
+        {/* App zone — the dashboard */}
+        <Route path="/app" element={<AppShell />}>
           <Route index element={<Scanner />} />
           <Route path="pair/:symbol" element={<PairDetail />} />
           <Route path="portfolio"  element={<Portfolio />} />
           <Route path="analytics"  element={<Analytics />} />
           <Route path="harvest"    element={<Harvest />} />
-          <Route path="developers" element={<Developers />} />
           <Route path="settings"   element={<Settings />} />
         </Route>
       </Routes>

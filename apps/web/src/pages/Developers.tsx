@@ -6,10 +6,32 @@
  * mirrors packages/server/src/routes and the client in packages/sdk.
  */
 import React, { useState } from 'react';
-import { Code2, Terminal, KeyRound, Radio, Copy, Check, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Code2, Terminal, KeyRound, Radio, Copy, Check, ExternalLink, Bird, ArrowLeft } from 'lucide-react';
 import { toast } from '../components/shared/Toast';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { PageHeader } from '../components/ui';
+
+// Public header — /docs renders outside the app shell, so it carries its own
+// nav back to the marketing site and into the app.
+const DocsNav: React.FC = () => (
+  <header style={{
+    position: 'sticky', top: 0, zIndex: 50,
+    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+    background: 'rgba(7,8,11,0.72)', borderBottom: '1px solid var(--c-800)',
+  }}>
+    <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', gap: 16 }}>
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
+        <Bird size={22} color="var(--accent)" />
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--w-000)', letterSpacing: '-0.02em' }}>OSPREY</span>
+      </Link>
+      <nav style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Link to="/" className="btn btn-ghost btn-sm" style={{ border: 'none' }}><ArrowLeft size={14} /> Home</Link>
+        <Link to="/app" className="btn btn-primary btn-sm">Launch App</Link>
+      </nav>
+    </div>
+  </header>
+);
 
 const SDK_INSTALL = `npm install @osprey/sdk`;
 
@@ -127,9 +149,11 @@ const Developers: React.FC = () => {
   const { isMobile } = useBreakpoint();
 
   return (
-    <div className="fade-in" style={{ paddingTop: 'var(--sp-4)', maxWidth: 820 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--grad-ambient)' }}>
+      <DocsNav />
+      <div className="fade-in" style={{ paddingTop: 'var(--sp-6)', paddingBottom: 'var(--sp-10)', paddingLeft: 24, paddingRight: 24, maxWidth: 860, margin: '0 auto' }}>
       <PageHeader
-        title={<><Code2 size={20} color="var(--hl-teal)" /> Developers</>}
+        title={<><Code2 size={20} color="var(--accent)" /> Developers</>}
         subtitle={
           <>Access Osprey programmatically — read live funding intelligence or drive the harvest engine from your own code.
           Use the typed <strong style={{ color: 'var(--text-primary)' }}>@osprey/sdk</strong> client, or call the REST + WebSocket API directly.</>
@@ -196,7 +220,7 @@ const Developers: React.FC = () => {
 
       {/* Links */}
       <div style={{ display: 'flex', gap: 'var(--sp-3)', flexWrap: 'wrap' }}>
-        <a href="https://github.com/osprey" target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px', textDecoration: 'none' }}>
+        <a href="https://github.com/Xtley001/osprey" target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px', textDecoration: 'none' }}>
           <ExternalLink size={13} /> SDK reference & examples
         </a>
         <a href="https://app.hyperliquid.xyz" target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px', textDecoration: 'none' }}>
@@ -206,6 +230,7 @@ const Developers: React.FC = () => {
       <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 'var(--sp-3)' }}>
         SDK package: <code style={{ fontFamily: 'var(--font-mono)' }}>@osprey/sdk</code> · API surface defined in <code style={{ fontFamily: 'var(--font-mono)' }}>packages/server</code>.
       </p>
+      </div>
     </div>
   );
 };

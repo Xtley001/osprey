@@ -1,3 +1,4 @@
+@import './fonts.css';
 @import './tokens.css';
 @tailwind base;
 @tailwind components;
@@ -7,8 +8,8 @@
 
 html, body, #root {
   height: 100%;
-  background: var(--bg-page);
-  color: var(--text-primary);
+  background: var(--c-950);
+  color: var(--w-050);
   font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.55;
@@ -16,6 +17,9 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11'; /* Inter optical features */
 }
+
+/* Numbers look machined: tabular figures everywhere mono is used. */
+.mono, .stat-value, [class*="mono"] { font-variant-numeric: tabular-nums; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -25,14 +29,23 @@ html, body, #root {
 
 /* Glass card */
 .glass-card {
-  background: var(--glass-surface);
-  border: 1px solid var(--glass-border);
+  background: var(--grad-surface);
+  border: 1px solid var(--c-700);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-card);
   transition: border-color var(--t-fast), background var(--t-fast);
 }
-.glass-card:hover { background: var(--glass-hover); border-color: rgba(255,255,255,0.12); }
-.glass-card.highlighted { border-color: var(--glass-border-hl); box-shadow: var(--hl-teal-glow); }
+.glass-card:hover { border-color: var(--c-600); }
+.glass-card.highlighted { border-color: var(--glass-border-hl); box-shadow: var(--accent-glow); }
+
+/* Hero card — gradient hairline border via mask. Use sparingly (1–2 per view). */
+.hero-card { position: relative; }
+.hero-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--grad-border);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+}
 
 /* Rate badge */
 .rate-badge {
@@ -56,23 +69,77 @@ html, body, #root {
 .label   { font-size: 10px; font-weight: 600; letter-spacing: var(--ls-widest); text-transform: uppercase; color: var(--text-muted); }
 .stat-value { font-family: var(--font-mono); font-weight: 600; letter-spacing: -0.01em; }
 
-/* Buttons */
+/* Buttons — machined, fixed-height, one accent */
 .btn {
-  display: inline-flex; align-items: center; gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-4); border-radius: var(--r-md);
-  font-family: var(--font-body); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer; transition: all var(--t-fast);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  height: 36px; padding: 0 var(--sp-4); border-radius: var(--r-md);
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.01em; white-space: nowrap;
+  cursor: pointer; transition: transform var(--t-fast), background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
   border: 1px solid transparent; text-decoration: none;
 }
-.btn-primary { background: var(--hl-teal); color: #0a0b0f; }
-.btn-primary:hover { background: #5ff0e0; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-ghost { background: transparent; color: var(--text-secondary); border-color: var(--glass-border); }
-.btn-ghost:hover { background: var(--glass-hover); color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
-.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-danger { background: rgba(255,79,110,0.12); color: var(--accent-red); border-color: rgba(255,79,110,0.25); }
-.btn-danger:hover { background: rgba(255,79,110,0.2); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: translateY(0); }
+
+.btn-primary { background: var(--grad-accent); color: #07080B; box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--accent-glow); }
+
+.btn-secondary { background: var(--c-800); color: var(--w-050); border-color: var(--c-700); }
+.btn-secondary:hover:not(:disabled) { background: var(--c-750); border-color: var(--c-600); }
+
+.btn-ghost { background: transparent; color: var(--w-100); border-color: var(--c-700); }
+.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.045); color: var(--w-050); border-color: var(--c-600); }
+
+.btn-danger { background: rgba(255,90,114,0.10); color: var(--neg); border-color: rgba(255,90,114,0.25); }
+.btn-danger:hover:not(:disabled) { background: rgba(255,90,114,0.18); }
+
+/* Sizes */
+.btn-sm { height: 30px; padding: 0 12px; font-size: 12px; }
+.btn-lg { height: 44px; padding: 0 22px; font-size: 15px; }
+
+/* Live dot — the "it's alive" signal. Use on genuinely-live indicators only. */
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(67,232,216,0.5); animation: livePulse 2s infinite;
+  flex-shrink: 0; display: inline-block;
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(67,232,216,0.45); }
+  70%  { box-shadow: 0 0 0 6px rgba(67,232,216,0); }
+  100% { box-shadow: 0 0 0 0 rgba(67,232,216,0); }
+}
+
+/* Value tick flash — flash on a number that just changed. */
+@keyframes flashUp   { from { background: rgba(47,215,155,0.18); } to { background: transparent; } }
+@keyframes flashDown { from { background: rgba(255,90,114,0.18); } to { background: transparent; } }
+.flash-up   { animation: flashUp 0.5s ease-out; }
+.flash-down { animation: flashDown 0.5s ease-out; }
+
+/* Skeleton shimmer — loading placeholder that matches real layout. */
+.skeleton {
+  position: relative; overflow: hidden; border-radius: var(--r-sm);
+  background: var(--c-800);
+}
+.skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* Segmented control — for filter tabs / timeframe pickers. */
+.segmented {
+  display: inline-flex; padding: 3px; gap: 2px;
+  background: var(--c-900); border: 1px solid var(--c-700); border-radius: var(--r-md);
+}
+.segmented button {
+  height: 28px; padding: 0 12px; border: none; background: transparent; cursor: pointer;
+  color: var(--w-200); font-family: var(--font-body); font-size: 12px; font-weight: 600;
+  border-radius: 7px; transition: color var(--t-fast), background var(--t-fast); white-space: nowrap;
+}
+.segmented button:hover { color: var(--w-050); }
+.segmented button[data-active="true"] { background: var(--c-750); color: var(--w-000); box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset; }
 
 /* Stat card */
 .stat-card {
@@ -103,8 +170,9 @@ html, body, #root {
   padding: var(--sp-2) var(--sp-3); outline: none;
   transition: border-color var(--t-fast); width: 100%;
 }
-.input:focus { border-color: var(--hl-teal); }
-.input::placeholder { color: var(--text-muted); }
+.input { height: 36px; transition: border-color var(--t-fast), box-shadow var(--t-fast); }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.input::placeholder { color: var(--w-300); }
 select.input { cursor: pointer; }
 select.input option { background: var(--bg-overlay); }
 
@@ -113,7 +181,7 @@ select.input option { background: var(--bg-overlay); }
    doesn't disturb the pointer-driven aesthetic. Inputs opt out of the default
    outline via their own :focus styles; this restores it for keyboard users. */
 :focus-visible {
-  outline: 2px solid var(--hl-teal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }

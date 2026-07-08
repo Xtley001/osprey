@@ -1,4 +1,4 @@
-import { LayoutGrid, Bot, Briefcase, BarChart2, Code2, Settings } from 'lucide-react';
+import { LayoutGrid, Bot, Briefcase, BarChart2, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavItem {
@@ -9,18 +9,15 @@ export interface NavItem {
   primary: boolean;
 }
 
-// Single source of truth for navigation (audit P2-3 — was duplicated across
-// AppShell + Sidebar). Order = the intended product flow:
-//   discover → act → monitor → analyze → integrate → configure
-//
-// `primary` items appear in the mobile bottom bar. Settings stays primary so
-// wallet connection is reachable on mobile (no sidebar there); Developers is a
-// desktop-oriented docs page and lives in the sidebar only.
+// Single source of truth for the dashboard navigation. The app lives under
+// /app; the marketing zone (/, /docs) is separate. Order = the product flow:
+//   discover → act → monitor → analyze → configure
+// Developers moved to the public /docs page — a docs surface doesn't belong in
+// the trading nav.
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/',           icon: LayoutGrid, label: 'Scanner',    primary: true  },
-  { to: '/harvest',    icon: Bot,        label: 'Harvest',    primary: true  },
-  { to: '/portfolio',  icon: Briefcase,  label: 'Portfolio',  primary: true  },
-  { to: '/analytics',  icon: BarChart2,  label: 'Analytics',  primary: true  },
-  { to: '/developers', icon: Code2,      label: 'Developers', primary: false },
-  { to: '/settings',   icon: Settings,   label: 'Settings',   primary: true  },
+  { to: '/app',           icon: LayoutGrid, label: 'Scanner',   primary: true },
+  { to: '/app/harvest',   icon: Bot,        label: 'Harvest',   primary: true },
+  { to: '/app/portfolio', icon: Briefcase,  label: 'Portfolio', primary: true },
+  { to: '/app/analytics', icon: BarChart2,  label: 'Analytics', primary: true },
+  { to: '/app/settings',  icon: Settings,   label: 'Settings',  primary: true },
 ];

@@ -1,86 +1,117 @@
 :root {
-  /* ── Page ── */
-  --bg-page:         #0a0b0f;
-  --bg-surface:      #0f1117;
-  --bg-elevated:     #161820;
-  --bg-overlay:      #1c1e28;
+  /* ═══════════════════════════════════════════════════════════════════════
+     OSPREY DESIGN TOKENS
+     Charcoal-and-white monochrome foundation + one teal accent.
+     New ramps are canonical; legacy names are aliased at the bottom so
+     existing inline styles inherit the new look untouched.
+     ═══════════════════════════════════════════════════════════════════════ */
 
-  /* ── Glass surfaces ── */
-  --glass-surface:   rgba(255, 255, 255, 0.035);
-  --glass-hover:     rgba(255, 255, 255, 0.06);
-  --glass-border:    rgba(255, 255, 255, 0.07);
-  --glass-border-hl: rgba(100, 220, 200, 0.25);
+  /* ── Charcoal ramp — canvas → elevated surfaces ── */
+  --c-950: #07080B;   /* true-black page canvas */
+  --c-900: #0B0D12;   /* app shell / behind cards */
+  --c-850: #101319;   /* card surface */
+  --c-800: #161A22;   /* elevated / hover */
+  --c-750: #1D222C;   /* overlay / modal */
+  --c-700: #262C38;   /* hairline border / divider */
+  --c-600: #333A48;   /* strong border / disabled fill */
 
-  /* ── Hyperliquid accent palette ── */
-  --hl-teal:         #43e8d8;
-  --hl-teal-dim:     rgba(67, 232, 216, 0.15);
-  --hl-teal-glow:    0 0 20px rgba(67, 232, 216, 0.3);
+  /* ── Ink / white ramp — text & lines ── */
+  --w-000: #FFFFFF;   /* hero numbers, key values */
+  --w-050: #F3F5F9;   /* primary text */
+  --w-100: #D7DBE6;   /* strong secondary */
+  --w-200: #A2A8B8;   /* secondary / captions */
+  --w-300: #6B7180;   /* muted / placeholder */
+  --w-400: #464C5A;   /* disabled */
 
-  --accent-green:    #00d4a0;
-  --accent-red:      #ff4f6e;
-  --accent-yellow:   #f5c542;
-  --accent-blue:     #5b8dee;
-  --accent-purple:   #9b6dff;
-  --accent-orange:   #ff8c42;
+  /* ── The single accent (teal) + semantics ── */
+  --accent:        #43E8D8;
+  --accent-strong: #5FF0E0;
+  --accent-dim:    rgba(67, 232, 216, 0.12);
+  --accent-glow:   0 0 24px rgba(67, 232, 216, 0.28);
 
-  /* ── Funding rate heat colors ── */
-  --rate-cold:       #5b8dee;
-  --rate-warm:       #f5c542;
-  --rate-hot:        #ff8c42;
-  --rate-fire:       #ff4f6e;
+  --pos:    #2FD79B;   /* P&L up */
+  --neg:    #FF5A72;   /* P&L down */
+  --warn:   #F5C542;   /* caution / warm funding */
 
-  /* ── Text ── */
-  --text-primary:    #e8eaf0;
-  --text-secondary:  #7a7f96;
-  --text-muted:      #44475a;
-  --text-teal:       #43e8d8;
-  --text-green:      #00d4a0;
-  --text-red:        #ff4f6e;
+  /* ── Funding-rate heat (data, earns its color) ── */
+  --rate-cold: #5B8DEE;
+  --rate-warm: #F5C542;
+  --rate-hot:  #FF8C42;
+  --rate-fire: #FF5A72;
+
+  /* ── Gradient language ── */
+  /* Top-lit surface — every card. Highlight ≤4% white. */
+  --grad-surface: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 42%), var(--c-850);
+  /* Ambient charcoal glow — full-page backdrops only, one per viewport. */
+  --grad-ambient: radial-gradient(1200px 600px at 50% -12%, rgba(67,232,216,0.07), transparent 60%), var(--c-950);
+  /* Accent — primary CTA only. */
+  --grad-accent: linear-gradient(135deg, #43E8D8 0%, #2FC9BE 100%);
+  /* Hairline gradient border — hero cards. */
+  --grad-border: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03));
+
+  /* ── Elevation (light, not heavy shadow) ── */
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.7);
+  --shadow-pop:  0 1px 0 rgba(255,255,255,0.04) inset, 0 24px 60px -20px rgba(0,0,0,0.85);
+  --ring-focus:  0 0 0 2px var(--c-900), 0 0 0 4px var(--accent);
 
   /* ── Radius ── */
-  --r-sm:  6px;
-  --r-md:  10px;
-  --r-lg:  14px;
-  --r-xl:  20px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
 
   /* ── Spacing ── */
-  --sp-1: 4px;
-  --sp-2: 8px;
-  --sp-3: 12px;
-  --sp-4: 16px;
-  --sp-5: 20px;
-  --sp-6: 24px;
-  --sp-8: 32px;
-  --sp-10: 40px;
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-10: 40px;
 
-  /* ── Typography ── */
-  --font-display: 'Syne', sans-serif;       /* page titles, stat values, nav labels */
-  --font-body:    'Inter', sans-serif;       /* all UI text, labels, descriptions    */
-  --font-mono:    'JetBrains Mono', monospace; /* rates, prices, numbers, code      */
+  /* ── Typography (self-hosted, metric-matched fallbacks) ── */
+  --font-display: 'Syne', 'Syne Fallback', system-ui, sans-serif;
+  --font-body:    'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Mono Fallback', ui-monospace, monospace;
 
   /* ── Type scale ── */
-  --text-xs:   11px;
-  --text-sm:   12px;
-  --text-base: 13px;
-  --text-md:   14px;
-  --text-lg:   16px;
-  --text-xl:   20px;
-  --text-2xl:  24px;
-  --text-3xl:  30px;
+  --text-xs: 11px;  --text-sm: 12px;  --text-base: 13px; --text-md: 14px;
+  --text-lg: 16px;  --text-xl: 20px;  --text-2xl: 24px;  --text-3xl: 30px;
 
   /* ── Letter spacing ── */
-  --ls-tight:  -0.02em;
-  --ls-normal:  0em;
-  --ls-wide:    0.04em;
-  --ls-wider:   0.08em;
-  --ls-widest:  0.12em;
-
-  /* ── Shadows ── */
-  --shadow-card:    0 2px 16px rgba(0,0,0,0.6);
-  --shadow-panel:   0 4px 40px rgba(0,0,0,0.8);
+  --ls-tight: -0.02em; --ls-normal: 0em; --ls-wide: 0.04em;
+  --ls-wider: 0.08em;  --ls-widest: 0.12em;
 
   /* ── Transitions ── */
   --t-fast:   120ms ease;
   --t-normal: 220ms ease;
-  --t-slow:   380ms cubic-bezier(0.16,1,0.3,1);
+  --t-slow:   380ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LEGACY ALIASES — old names → new values. Do not add new usages.
+     ═══════════════════════════════════════════════════════════════════════ */
+  --bg-page:     var(--c-950);
+  --bg-surface:  var(--c-900);
+  --bg-elevated: var(--c-800);
+  --bg-overlay:  var(--c-750);
+
+  --glass-surface:   var(--grad-surface);
+  --glass-hover:     rgba(255, 255, 255, 0.045);
+  --glass-border:    var(--c-700);
+  --glass-border-hl: rgba(67, 232, 216, 0.30);
+
+  --hl-teal:      var(--accent);
+  --hl-teal-dim:  var(--accent-dim);
+  --hl-teal-glow: var(--accent-glow);
+
+  --accent-green:  var(--pos);
+  --accent-red:    var(--neg);
+  --accent-yellow: var(--warn);
+  --accent-blue:   #5B8DEE;
+  --accent-purple: #9B6DFF;
+  --accent-orange: #FF8C42;
+
+  --text-primary:   var(--w-050);
+  --text-secondary: var(--w-200);
+  --text-muted:     var(--w-300);
+  --text-teal:      var(--accent);
+  --text-green:     var(--pos);
+  --text-red:       var(--neg);
+
+  --shadow-panel: var(--shadow-pop);
 }

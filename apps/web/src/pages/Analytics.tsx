@@ -160,7 +160,7 @@ const Analytics: React.FC = () => {
               {perfList.map(([symbol, v]) => {
                 const pairData = allPairs.find(p => p.symbol === symbol);
                 return (
-                  <tr key={symbol} onClick={() => navigate(`/pair/${symbol}`)}
+                  <tr key={symbol} onClick={() => navigate(`/app/pair/${symbol}`)}
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer', transition: 'background var(--t-fast)' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -207,7 +207,7 @@ const Analytics: React.FC = () => {
             </thead>
             <tbody>
               {leaders.map((pair, i) => (
-                <tr key={pair.symbol} onClick={() => navigate(`/pair/${pair.symbol}`)}
+                <tr key={pair.symbol} onClick={() => navigate(`/app/pair/${pair.symbol}`)}
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', cursor: 'pointer', transition: 'background var(--t-fast)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

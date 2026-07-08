@@ -1,30 +1,38 @@
 import React from 'react';
 
-type Variant = 'primary' | 'ghost' | 'danger';
-type Size    = 'sm' | 'md';
-
-const SIZE: Record<Size, React.CSSProperties> = {
-  sm: { padding: '4px 10px', fontSize: 12 },
-  md: { padding: 'var(--sp-2) var(--sp-4)', fontSize: 12 },
-};
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Size    = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** Shows a spinner and disables the button; width stays locked (no reflow). */
+  loading?: boolean;
 }
 
 /**
- * Button primitive over the existing `.btn` CSS classes so every call site
- * stops re-specifying padding/font inline. `style` still overrides for edge cases.
+ * Button primitive over the `.btn` CSS classes. Fixed heights, one accent,
+ * built-in loading state. `style` still overrides for edge cases.
  */
-export const Button: React.FC<ButtonProps> = ({ variant = 'ghost', size = 'sm', className, style, children, ...rest }) => (
-  <button
-    className={`btn btn-${variant}${className ? ' ' + className : ''}`}
-    style={{ ...SIZE[size], ...style }}
-    {...rest}
-  >
-    {children}
-  </button>
-);
+export const Button: React.FC<ButtonProps> = ({
+  variant = 'secondary', size = 'md', loading = false,
+  className, style, children, disabled, ...rest
+}) => {
+  const sizeClass = size === 'sm' ? ' btn-sm' : size === 'lg' ? ' btn-lg' : '';
+  return (
+    <button
+      className={`btn btn-${variant}${sizeClass}${className ? ' ' + className : ''}`}
+      style={style}
+      disabled={disabled || loading}
+      {...rest}
+    >
+      {loading && <span className="spin" style={{
+        width: 13, height: 13, borderRadius: '50%',
+        border: '2px solid currentColor', borderTopColor: 'transparent', display: 'inline-block',
+      }} />}
+      {children}
+    </button>
+  );
+};
 
 export default Button;

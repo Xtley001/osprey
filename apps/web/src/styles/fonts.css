@@ -1,0 +1,88 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Self-hosted fonts — served from /public/fonts, no third-party CDN.
+   This kills the "generic font flashes until I clear cache & reload" bug:
+   the files ship from our own origin, the two above-the-fold faces are
+   <link rel=preload>ed in index.html, and metric-matched fallback faces
+   below make the swap dimensionally identical → no visible reflow.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Inter — body ── */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+
+/* ── Syne — display / headlines ── */
+@font-face {
+  font-family: 'Syne';
+  src: url('/fonts/Syne-SemiBold.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Syne';
+  src: url('/fonts/Syne-Bold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Syne';
+  src: url('/fonts/Syne-ExtraBold.woff2') format('woff2');
+  font-weight: 800; font-style: normal; font-display: swap;
+}
+
+/* ── JetBrains Mono — data / numbers ── */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-SemiBold.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+
+/* ── Metric-matched fallbacks ──
+   The system font that paints in the first frame is re-scaled to match the
+   real font's x-height/metrics, so when the webfont swaps in there is no
+   layout shift and no perceptible "generic font" flash. Values tuned for
+   Segoe UI / Roboto (the common Win/Android system faces). */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial');
+  size-adjust: 107%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Syne Fallback';
+  src: local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial');
+  size-adjust: 112%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Mono Fallback';
+  src: local('Consolas'), local('Menlo'), local('Courier New');
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
